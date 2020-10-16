@@ -15,9 +15,9 @@ TODO: Option to generate each output image's name using image recognition
 
 from PIL import Image
 from itertools import repeat
+from pathlib import Path
 import concurrent.futures
 import argparse
-import pathlib
 import zipfile
 import tarfile
 import hashlib
@@ -25,26 +25,42 @@ import shutil
 import sys
 import os
 import re
+import logging
 
 def main(args):
-    # The images files that will be processed
-    valid_files = re.compile(r'.*\.(jpg|jpeg|png|webp)$', re.IGNORECASE)
-    images = [x for x in os.listdir(args.input_dir) if valid_files.match(x)]
 
-    # Process each image file using multi-processing
+    args = parse_arguments()
+    if args.verbose == 1:
+        logging.basicConfig(level=logging.INFO)
+
+    # What files will be processed
+    valid_files = re.compile(r'.*\.(jpg|jpeg|png|webp)$', re.IGNORECASE)
+    images = [file for file in os.listdir(args.input_dir) if valid_files.match(file)]
+
+    # For logging purposes only
+    get_images_size = (os.path.getsize(args.input_dir / img) for img in images)
+    logging.info(f'{len(images)} images found ({round(sum(get_images_size) / 1000000, 2)} Mb...)')
+
+    # Process each file using multi-processing
     with concurrent.futures.ProcessPoolExecutor() as executor:
         executor.map(process_image, images, repeat(args))
 
-    # Creates an archive to store all images
+    # If an archive flag was passed, make an archive for all the files
     if args.archive:
         make_archive(args)
 
-    # Deletes original images
+    # If the delete flag was passed, delete processed files
     if args.delete_original:
         delete_processed(images, args)
 
 
 def process_image(file, args):
+
+    '''Resizes the image, saves it and if specified it renames it using a hash
+    function to randomize its name'''
+
+    logging.info(f'Processing {file}...')
+
     filename, _ = os.path.splitext(file)
     with Image.open(args.input_dir / file) as img:
         # Get relevant data for the new image
@@ -54,6 +70,7 @@ def process_image(file, args):
 
         # Obscure filename with a hashing function
         if args.hash_names:
+            logging.info(f'Hashing filename...')
             filename = hashlib.sha1(file.encode('utf-8')).hexdigest()
 
         # Create new image file with specified dimensions
@@ -62,7 +79,9 @@ def process_image(file, args):
 
 
 def make_archive(args):
+
     '''Creates an archive of the specified format to store all processed images.'''
+
     archive_location = args.output_dir.parent
 
     # Create archive in tar format
@@ -73,60 +92,67 @@ def make_archive(args):
     # Create archive in zip format
     if args.archive == 'ZIP_STORED':
         with zipfile.ZipFile(archive_location / 'processed_images.zip', 'w') as zip:
-            for root, dirs, files in os.walk(args.output_dir):
-                r = os.path.basename(root)
-                zip.write(r)
-                for file in files:
-                    f = os.path.join(r, os.path.basename(file))
-                    zip.write(f)
+            os.chdir(args.output_dir)
+            for file in os.listdir(args.output_dir):
+                zip.write(file)
+
 
     # Once archive is created we can delete the output directory
+    logging.info(f'Archive created, removing output directory...')
     shutil.rmtree(args.output_dir)
 
 
 def delete_processed(images, args):
+
     '''Deletes all files that were processed'''
+
+    logging.info(f'Deleting originals...')
     for img in images:
         os.unlink(args.input_dir / img)
 
 
+def get_input_directory(path):
+
+    '''Verifies the path provided and returns it as a Path object'''
+
+    p = Path(path)
+    if p.exists() and p.is_dir():
+        return p.resolve()
+    else:
+        msg = f'{path} is not a valid directory or does not exist'
+        raise argparse.ArgumentTypeError(msg)
+
+
+def get_output_directory(path):
+
+    '''Verifies the path provided and returns it as a Path object. It'll
+    create any necessary directories if they don't exist'''
+
+    p = Path(path) / 'processed_images'
+    if p.exists() and p.is_dir():
+        return p.resolve()
+    elif p.exists() and not p.is_dir():
+        msg = f'{path} is not a valid directory'
+        raise argparse.ArgumentTypeError(msg)
+    else:
+        dir = p.resolve()
+        os.makedirs(dir)
+        return dir
+
+
+def get_watermark_image(path):
+
+    '''Verifies the path provided and returns an Image object'''
+
+    p = Path(path)
+    if p.exists() and p.is_file():
+        with Image.open(p.resolve()) as img:
+            return img
+    else:
+        msg = f'{path} is not a valid file or does not exist'
+        raise argparse.ArgumentTypeError(msg)
+
 def parse_arguments():
-    def get_input_directory(path):
-        '''Verifies the path provided and returns it as a Path object'''
-        p = pathlib.Path(path)
-        if p.exists() and p.is_dir():
-            return p.resolve()
-        else:
-            msg = f'{path} is not a valid directory or does not exist'
-            raise argparse.ArgumentTypeError(msg)
-
-
-    def get_output_directory(path):
-        '''Verifies the path provided and returns it as a Path object. It'll
-        create any necessary directories if they don't exist'''
-        p = pathlib.Path(path) / 'processed_images'
-        if p.exists() and p.is_dir():
-            return p.resolve()
-        elif p.exists() and not p.is_dir():
-            msg = f'{path} is not a valid directory'
-            raise argparse.ArgumentTypeError(msg)
-        else:
-            dir = p.resolve()
-            os.makedirs(dir)
-            return dir
-
-
-    def get_watermark_image(path):
-        '''Verifies the path provided and returns an Image object'''
-        p = pathlib.Path(path)
-        if p.exists() and p.is_file():
-            with Image.open(p.resolve()) as img:
-                return img
-        else:
-            msg = f'{path} is not a valid file or does not exist'
-            raise argparse.ArgumentTypeError(msg)
-
-
     parser = argparse.ArgumentParser(
         description='Bulk image processor - resize, convert and organize your images'
     )
@@ -170,10 +196,16 @@ def parse_arguments():
         action='store_true'
     )
     parser.add_argument('-w', '--watermark',
-        help='Produces a combined file with the provided watermark image',
+        help='Blends the provided image into the processed output',
         dest='watermark',
         metavar='image_file',
         type=get_watermark_image
+    )
+    parser.add_argument('-v', '--verbose',
+        help='Writes output to the terminal as the program runs',
+        dest='verbose',
+        action='count',
+        default=0
     )
     archive_options = parser.add_mutually_exclusive_group()
     archive_options.add_argument('-z', '--zip-archive',
@@ -192,5 +224,4 @@ def parse_arguments():
     return parser.parse_args()
 
 if __name__ == '__main__':
-    args = parse_arguments()
-    main(args)
+    main()
