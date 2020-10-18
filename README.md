@@ -13,6 +13,10 @@ The classic Game of Life has three simple rules, but can be complex enough to bu
 One of the most popular ciphers used over 2000 years ago. Following along the "Cracking Codes With Python" book by Al Sweigart, this is an attempt to create an improved and flexible implementation of the cipher that works from the command line. It supports the expected operations of encryption, decryption as well as key derivation and brute forcing.
 
 ---
+### [Transposition cipher](https://github.com/herokunt/python-scripts/blob/main/transposition-cipher.py)
+A cipher that works by laying the letters of a message in a grid of varying size and encrypting the message from it. Following along the "Cracking Codes With Python" book by Al Sweigart, this is an attempt to create an improved and flexible implementation of the cipher that works from the command line. It supports the expected operations of encryption, decryption as well as key derivation and brute forcing.
+
+---
 ### [Batch Resizer](https://github.com/herokunt/python-scripts/blob/main/batch-resizer.py)
 Batch resizer is a small utility script that looks at a directory and processes all images in it in some way. You can resize them, convert them into other formats or bundle them together in a nice compressed archive, ready to be uploaded. Some examples: 
 
