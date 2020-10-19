@@ -2,16 +2,21 @@
 
 '''
 caesar.py - a simple implementation of the caesar cipher used over 2000 years
-ago.
+ago. You can use this script to encrypt or decrypt a message, derive the key
+that was used to encrypt a message, brute force any message encrypted using
+this cipher and run test to verify it works
 
-USAGE: caesar.py [encrypt|decrypt|derive|force] [message] [key]
+USAGE: caesar-cipher.py [encrypt|decrypt|derive|force|test] [message] [key]
 
 # TODO: accept input from stdin in order to pipe commands together
-# TODO: accept text files as input, and redirect output to files
+# TODO: accept text files as input, and write output to files
 '''
 
+from is_lang import is_english
 import argparse
 import logging
+import random
+import copy
 import sys
 
 def main():
@@ -21,43 +26,49 @@ def main():
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
 
-    SYMBOLS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()_+'
+    # SYMBOLS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()_+'
 
     # Perform a different operation based on the arguments passed in
     if args.encrypt:
-        ciphertext = encrypt_msg(args.encrypt[0], args.encrypt[1], SYMBOLS)
+        ciphertext = encrypt(args.encrypt[0], args.encrypt[1])
         logging.debug(f'Encryption finished!')
         print(ciphertext)
 
     if args.decrypt:
-        cleartext = decrypt_msg(args.decrypt[0], args.decrypt[1], SYMBOLS)
+        cleartext = decrypt(args.decrypt[0], args.decrypt[1])
         logging.debug(f'Decryption finished!')
         print(cleartext)
 
     if args.derive_key:
-        key = derive_key(args.derive_key[0], args.derive_key[1], SYMBOLS)
+        key = derive_key(args.derive_key[0], args.derive_key[1])
         if key:
             print(f'The key used to encrypt this message was {key}')
 
     if args.force:
-        brute_force(args.force, SYMBOLS)
+        brute_force(args.force)
+
+    if args.test:
+        run_test(args.test)
 
 
-def encrypt_msg(msg, key, symbols, debug=True):
+def encrypt(msg, key, debug=True):
+
+    '''Encrypts a message using the provided key'''
+
+    # avoids unnecessary calls from derive key calls
+    if debug:
+        logging.debug('Starting encryption...')
+    SYMBOLS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()_+'
+
     try:
         key = int(key)
-        wrapper_value = len(symbols)
+        wrapper_value = len(SYMBOLS)
         ciphertext = ''
 
-        # The debug keyword here is used to omit this logging statement
-        # because the derive_key funciton will call it, creating a ton of
-        # unnecessary output
-        if debug:
-            logging.debug('Starting encryption...')
         for char in msg:
             # Find out if the letter can be encrypted
-            if char in symbols:
-                idx = symbols.find(char)
+            if char in SYMBOLS:
+                idx = SYMBOLS.find(char)
                 idx = idx + key
 
                 # Wrap values where index is under or over the symbols list
@@ -67,7 +78,7 @@ def encrypt_msg(msg, key, symbols, debug=True):
                     idx = idx + wrapper_value
 
                 # Append the symbol at calculated index
-                ciphertext += symbols[idx]
+                ciphertext += SYMBOLS[idx]
             else:
                 # Append current character as is
                 if char != ' ':
@@ -81,21 +92,24 @@ def encrypt_msg(msg, key, symbols, debug=True):
         sys.exit()
 
 
-def decrypt_msg(msg, key, symbols, debug=True):
+def decrypt(msg, key, debug=True):
+
+    '''Decrypts a message using the provided key'''
+
+    # avoids unnecessary calls from derive key calls
+    if debug:
+        logging.debug('Starting decryption...')
+    SYMBOLS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()_+'
+
     try:
         key = int(key)
-        wrapper_value = len(symbols)
+        wrapper_value = len(SYMBOLS)
         cleartext = ''
 
-        # The debug keyword here is used to omit this logging statement
-        # because the brute_force funciton will call it, creating a ton of
-        # unnecessary output
-        if debug:
-            logging.debug('Starting decryption...')
         for char in msg:
             # Find out if the char can be encrypted or append as is
-            if char in symbols:
-                idx = symbols.find(char)
+            if char in SYMBOLS:
+                idx = SYMBOLS.find(char)
                 idx = idx - key
 
                 # Wrap values where new char is under or over the symbols list
@@ -105,7 +119,7 @@ def decrypt_msg(msg, key, symbols, debug=True):
                     idx = idx + wrapper_value
 
                 # Append the symbol at calculated index
-                cleartext += symbols[idx]
+                cleartext += SYMBOLS[idx]
             else:
                 # Append current character as is
                 if char != ' ':
@@ -119,21 +133,86 @@ def decrypt_msg(msg, key, symbols, debug=True):
         sys.exit()
 
 
-def derive_key(cleartext, ciphertext, symbols):
+def derive_key(cleartext, ciphertext):
+
+    '''Calculates the key used to encrypt a message from it's cleartext form'''
+
     logging.debug('Starting derivation of key...')
-    for i in range(len(symbols)):
-        # Encrypt the cleartext until a match is found
-        result = encrypt_msg(cleartext, i, symbols, debug=False)
+    SYMBOLS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()_+'
+
+    for i in range(len(SYMBOLS)):
+        result = encrypt(cleartext, i, debug=False)
         if result == ciphertext:
             return i
-            
+
     print("These messages don't match or don't share the same cipher codes")
 
 
-def brute_force(ciphertext, symbols):
+def brute_force(ciphertext):
+
+    '''Brute forces through all possible key values to decrypt the message. On
+    each pass it evaluates if the decrypted string is in English and print it
+    to the terminal output for confirmation'''
+
     logging.debug('Starting brute force attack...')
-    for i in range(len(symbols)):
-        print(decrypt_msg(ciphertext, i, symbols, debug=False))
+    SYMBOLS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()_+'
+
+    try:
+        for i in range(len(SYMBOLS)):
+            result = decrypt(ciphertext, i, debug=False)
+            if is_english(result):
+                print('Found potential match:', end='\n\n')
+                print(result)
+                response = input('Continue? (y/n)')
+                if response.lower().startswith('n'):
+                    raise KeyboardInterrupt
+
+        print('Reached end of text')
+    except KeyboardInterrupt:
+        print('Exiting program...')
+        sys.exit()
+
+
+def run_test(total_tests):
+
+    '''Creates long pseudo-random strings and tests the encryption/decryption'''
+
+    logging.debug(f'Running {total_tests} tests...')
+    SYMBOLS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()_+ '
+
+    # set random seed to static number for consistent, reproducible tests
+    random.seed(42)
+    for i in range(1, total_tests + 1):
+        # generate a significant sample string
+        sample = SYMBOLS * random.randint(10, 100)
+        sample_length = len(sample)
+
+        # randomize the sorting
+        sample = list(sample)
+        random.shuffle(sample)
+        sample = ''.join(sample)
+
+        # generate random key
+        key = random.randint(1, 26)
+
+        # encrypt and decrypt back
+        ciphertext = encrypt(sample, key, debug=False)
+        decrypted = decrypt(ciphertext, key, debug=False)
+
+        # A little bit of fancy formatting
+        # {i:02} prints variable i with a leading 0 if length is not 2
+        logging.debug(f"Running test #{i:02}:\t{ciphertext[:40]}" + \
+        f"{sample_length - 40} characters".rjust(20, '.'))
+
+        if decrypted != sample:
+            print("[ERROR] Test failed! Exiting...")
+            logging.debug(f'Expected:\n{sample}')
+            logging.debug(f'Got:\n{decrypted}')
+            sys.exit()
+
+    print('-' * 50)
+    print('[OK] All tests passed!')
+    print('-' * 50)
 
 
 def parse_arguments():
@@ -159,6 +238,12 @@ def parse_arguments():
         help='brute forces through all possible key values to decrypt a message',
         dest='force',
         metavar='msg'
+    )
+    operations.add_argument('-t', '--test',
+        help='Test batch of 20 randomly generated strings of text',
+        metavar='tests',
+        action='store_const',
+        const=20
     )
     parser.add_argument('-v', '--verbose',
         help='prints additional information to terminal output',
