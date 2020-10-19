@@ -4,14 +4,16 @@
 in a grid of varying size, and reconstructing the ciphertext in order from the
 resulting grid.
 
-USAGE: transposition-cipher.py [encrypt|decrypt|derive|force] [message] [key]
+USAGE: transposition-cipher.py [encrypt|decrypt|derive|force|test] [message] [key]
 
 # TODO: add option to read from stdin
 # TODO: add option to read from and write to file
 '''
 
+from is_lang import is_english
 import argparse
 import logging
+import random
 import sys
 
 def main():
@@ -37,6 +39,9 @@ def main():
     if args.force:
         brute_force(args.force)
 
+    if args.test:
+        run_test(args.test)
+
 
 def encrypt(msg, key, debug=True):
 
@@ -48,7 +53,6 @@ def encrypt(msg, key, debug=True):
         if key < 0:
             raise ValueError
 
-        # For debugging purposes...
         if debug:
             logging.debug('Encrypting...')
 
@@ -75,7 +79,6 @@ def decrypt(msg, key, debug=True):
         if key < 0:
             raise ValueError
 
-        # For debugging purposes...
         if debug:
             logging.debug('Decrypting...')
 
@@ -118,23 +121,68 @@ def derive_key(cleartext, ciphertext):
 
 def brute_force(ciphertext):
 
-    '''Brute forces through all possible key permutations. Prints results to
-    terminal output in blocks of 10 to avoid cluttering the terminal'''
+    '''Brute forces through all possible key values to decrypt the message. On
+    each pass it evaluates if the decrypted string is in English and print it
+    to the terminal output for confirmation'''
 
     logging.debug('Starting brute force attack...')
-
     permutations = len(ciphertext)
-    for i in range(1, permutations):
-        result = decrypt(ciphertext, i, debug=False)
-        print(i, result, sep=': ')
 
-        if i != permutations and i % 10 == 0:
-            print('-' * 10)
-            response = input('Printing 10 results, continue? ')
-            print('-' * 10)
-            if 'n' in response.lower():
-                print('Exiting...')
-                sys.exit()
+    try:
+        for i in range(1, permutations):
+            result = decrypt(ciphertext, i, debug=False)
+            if is_english(result):
+                print('Found potential match:', end='\n\n')
+                print(result)
+                response = input('Continue? (y/n)')
+                if response.lower().startswith('n'):
+                    raise KeyboardInterrupt
+
+        print('Reached end of text')
+    except KeyboardInterrupt:
+        print('Exiting program...')
+        sys.exit()
+
+
+def run_test(tests):
+
+    '''Creates long pseudo-random strings and tests the encryption/decryption'''
+
+    # set random seed to static number for consistent, reproducible tests
+    random.seed(42)
+    chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()_+ '
+
+    for i in range(1, tests + 1):
+        # create a long string of text
+        sample = chars * random.randint(10, 100)
+        sample_length = len(sample)
+
+        # randomize the input
+        sample = list(sample)
+        random.shuffle(sample)
+        sample = ''.join(sample)
+
+        # random key (for transposition cipher max value is msg length / 2)
+        key = random.randint(1, sample_length // 2)
+
+        # encrypt and decrypt right back
+        ciphertext = encrypt(sample, key, debug=False)
+        decrypted = decrypt(ciphertext, key, debug=False)
+
+        # A little bit of fancy formatting
+        # {i:02} prints variable i with a leading 0 if length is not 2
+        logging.debug(f"Running test #{i:02}:\t{ciphertext[:40]}" + \
+        f"{sample_length - 40} characters".rjust(20, '.'))
+
+        if decrypted != sample:
+            print('[ERROR] Test Failed!')
+            logging.debug(f'Expected:\n{sample}')
+            logging.debug(f'Got:\n{decrypted}')
+            sys.exit()
+
+    print('-' * 20)
+    print('[OK] All tests passed!')
+    print('-' * 20)
 
 
 def parse_arguments():
@@ -162,12 +210,18 @@ def parse_arguments():
         metavar='msg',
         dest='force'
     )
+    operations.add_argument('-t', '--test',
+        help='Test batch of 20 randomly generated strings of text',
+        metavar='tests',
+        action='store_const',
+        const=20
+    )
     parser.add_argument('-v', '--verbose',
         help='prints additional information to terminal output',
         action='store_true'
     )
-
     return parser.parse_args()
+
 
 if __name__ == '__main__':
     main()
