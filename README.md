@@ -55,3 +55,7 @@ B oasmtopcmrhee  srwseaesydi. z aeYrroc uhi iscv aean,   srrmeeasalidlzy e u ttt
 $ transposition-cipher.py -d 'B oasmtopcmrhee  srwseaesydi. z aeYrroc uhi iscv aean,   srrmeeasalidlzy e u tttoih lebimet, y u cpsolcnorvaiedprettd  .tthhaetm  lionotkos  oatth ear  dfiorremcattosr yo ra nbdu npdrloec etshseems  taolgle tihmearg eisn  ian  niitc ei nc' 99
 Batch resizer is a small utility script that looks at a directory and processes all images in it in some way. You can resize them, convert them into other formats or bundle them together in a nice compressed archive, ready to be uploaded.
 ```
+
+---
+#### [Affine Cipher](https://github.com/herokunt/python-scripts/blob/main/affine_cipher.py)
+A combination of the Caesar cipher and Multiplicative cipher to create stronger encryption. Following along the "Cracking Codes With Python" book by Al Sweigart, this script is very simple to use from the command line to encrypt, decrypt or brute force any ciphertext encrypted using this cipher.
