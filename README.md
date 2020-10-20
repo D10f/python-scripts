@@ -59,3 +59,9 @@ Batch resizer is a small utility script that looks at a directory and processes 
 ---
 #### [Affine Cipher](https://github.com/herokunt/python-scripts/blob/main/affine_cipher.py)
 A combination of the Caesar cipher and Multiplicative cipher to create stronger encryption. Following along the "Cracking Codes With Python" book by Al Sweigart, this script is very simple to use from the command line to encrypt, decrypt or brute force any ciphertext encrypted using this cipher.
+
+```
+$ affine_cipher.py -e 'Hello GitHub viewers, thank you for checking this one out!'
+The encryption key is: 4351
+#fYYV $bQ#Pi ObfNfSR, QcjWZ LVP eVS hcfhZbWd QcbR VWf VPQJ
+```
