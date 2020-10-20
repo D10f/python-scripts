@@ -213,8 +213,9 @@ def parse_arguments():
     operations.add_argument('-t', '--test',
         help='Test batch of 20 randomly generated strings of text',
         metavar='tests',
-        action='store_const',
-        const=20
+        nargs='?',
+        const=20,
+        type=int
     )
     parser.add_argument('-v', '--verbose',
         help='prints additional information to terminal output',
