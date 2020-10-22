@@ -21,6 +21,30 @@ $ resizer.py ~/Pictures -o ~/Desktop -r 1200 1200 -f webp -t -d
 ```
 
 ---
+#### [Oh, Node!](https://github.com/herokunt/python-scripts/blob/main/oh_node.py)
+Curious about how many files does that node_modules folder has in it? How many lines of code? What kind of files are in there? This small utility script will find out for you exactly that!
+ 
+```
+$ oh_node.py ~/Projects/ -t 10
+oh_node.py - Scan Complete
+--------------------------------------------------
+Total files.................................129514
+  Showing 10 most common extensions
+  js.........................................80095
+  json.......................................10800
+  ts..........................................8897
+  map.........................................3668
+  md..........................................2486
+  yml.........................................1202
+  flow........................................1191
+  png..........................................494
+  npmignore....................................452
+  txt..........................................362
+Total size.................................657.9MB
+Total lines of code.......................14504117
+```
+
+---
 #### [Zombie Dice](https://github.com/herokunt/python-scripts/blob/main/zombiedice.py)
 Zombie Dice is a "press your luck" party dice game created by Steve Jackson Games. Following along the "Automating the Boring Stuff With Python" book by Al Sweigart I wrote this script that plays this game using bots.
 
