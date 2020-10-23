@@ -89,3 +89,22 @@ $ affine_cipher.py -e 'Hello GitHub viewers, thank you for checking this one out
 The encryption key is: 4351
 #fYYV $bQ#Pi ObfNfSR, QcjWZ LVP eVS hcfhZbWd QcbR VWf VPQJ
 ```
+
+---
+#### [Simple Substitution Cipher](https://github.com/herokunt/python-scripts/blob/main/simple_sub_cipher.py)
+A substitution cipher uses a re-arranged alphabet (in this case English alphabet) as the key to encrypt a message. This results in too many possible combinations to brute force through each of them in a reasonable amount of time, but can be hacked through cross-referencing each letter from the message. Because of this, it's also most effective the longer the encrypted message. Following along the "Cracking Codes With Python" book by Al Sweigart, this is an implementation that can be used from the command line.
+
+Encryption:
+```
+$ simple_sub_cipher.py -e "The Ministry of Truth contained, it was said, three thousand rooms above ground level... Scattered about London there were just three other buildings of similar appearance and size... They were the homes of the four Ministries between which the entire apparatus of government was divided. The Ministry of Truth, which concerned itself with news, entertainment, education, and the fine arts. The Ministry of Peace, which concerned itself with war. The Ministry of Love, which maintained law and order. And the Ministry of Plenty, which was responsible for economic affairs."
+
+The encryption key is: OKXAUPCVQBISTNZHYDJWRMEGLF
+Wvu Tqnqjwdl zp Wdrwv xznwoqnua, qw eoj joqa, wvduu wvzrjona dzztj okzmu cdzrna sumus... Jxowwudua okzrw Sznazn wvudu eudu brjw wvduu zwvud krqsaqncj zp jqtqsod ohhuodonxu ona jqfu... Wvul eudu wvu vztuj zp wvu pzrd Tqnqjwdquj kuweuun evqxv wvu unwqdu ohhodowrj zp czmudntunw eoj aqmqaua. Wvu Tqnqjwdl zp Wdrwv, evqxv xznxudnua qwjusp eqwv nuej, unwudwoqntunw, uarxowqzn, ona wvu pqnu odwj. Wvu Tqnqjwdl zp Huoxu, evqxv xznxudnua qwjusp eqwv eod. Wvu Tqnqjwdl zp Szmu, evqxv toqnwoqnua soe ona zdaud. Ona wvu Tqnqjwdl zp Hsunwl, evqxv eoj dujhznjqksu pzd uxznztqx oppoqdj.
+```
+
+Cross-reference attack:
+```
+$ simple_sub_cipher.py -f "Wvu Tqnqjwdl zp Wdrwv xznwoqnua, qw eoj joqa, wvduu wvzrjona dzztj okzmu cdzrna sumus... Jxowwudua okzrw Sznazn wvudu eudu brjw wvduu zwvud krqsaqncj zp jqtqsod ohhuodonxu ona jqfu... Wvul eudu wvu vztuj zp wvu pzrd Tqnqjwdquj kuweuun evqxv wvu unwqdu ohhodowrj zp czmudntunw eoj aqmqaua. Wvu Tqnqjwdl zp Wdrwv, evqxv xznxudnua qwjusp eqwv nuej, unwudwoqntunw, uarxowqzn, ona wvu pqnu odwj. Wvu Tqnqjwdl zp Huoxu, evqxv xznxudnua qwjusp eqwv eod. Wvu Tqnqjwdl zp Szmu, evqxv toqnwoqnua soe ona zdaud. Ona wvu Tqnqjwdl zp Hsunwl, evqxv eoj dujhznjqksu pzd uxznztqx oppoqdj."
+
+Tve Ministrl of Trutv contained, it eas said, tvree tvousand rooms above ground level... Scattered about London tvere eere bust tvree otver buildings of similar appearance and sife... Tvel eere tve vomes of tve four Ministries beteeen evicv tve entire apparatus of government eas divided. Tve Ministrl of Trutv, evicv concerned itself eitv nees, entertainment, education, and tve fine arts. Tve Ministrl of Peace, evicv concerned itself eitv ear. Tve Ministrl of Love, evicv maintained lae and order. And tve Ministrl of Plentl, evicv eas responsible for economic affairs.
+```
