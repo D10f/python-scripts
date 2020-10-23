@@ -243,6 +243,8 @@ def create_key_from_map(cipher_map):
         if len(cipher_map[letter]) == 1:
             i = LETTERS.find(cipher_map[letter][0])
             key[i] = letter
+    
+    logging.debug(f'Derived key: {key}')
     return ''.join(key)
 
 
