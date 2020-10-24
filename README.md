@@ -45,6 +45,30 @@ Total lines of code.......................14504117
 ```
 
 ---
+#### [Nama Nama](https://github.com/herokunt/python-scripts/blob/main/nama_nama.py)
+"Nama" means name in some languages such as Malay or Indonesian. This small utility script will help organize any collection of files by renaming them uniformly, adding prefixes and sufixes, custom separators, etc. Ideal for music, images, books and other types of documents that have uneven format (mixed of uppercase and lowercase, underscores with spaces, etc). Before, and after:
+
+```
+$ ls ~/Documents/books/linux
+'Ansible for DevOps.epub'
+ grep.pdf
+'Introduction to Linux.pdf'
+'Learn Linux in 5 days.pdf'
+'Linux BASH Programming Cookbook.pdf'
+ linuxsys.pdf
+ sed.pdf
+ 
+$ nama_nama.py ~/Documents/books/linux --title --split --separate _ --dry-run
+Ansible_For_Devops.epub
+Sed.pdf
+Grep.pdf
+Introduction_To_Linux.pdf
+Linux_Bash_Programming_Cookbook.pdf
+Linuxsys.pdf
+Learn_Linux_In_5_Days.pdf
+```
+
+---
 #### [Zombie Dice](https://github.com/herokunt/python-scripts/blob/main/zombiedice.py)
 Zombie Dice is a "press your luck" party dice game created by Steve Jackson Games. Following along the "Automating the Boring Stuff With Python" book by Al Sweigart I wrote this script that plays this game using bots.
 
