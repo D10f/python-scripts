@@ -39,7 +39,6 @@ optional arguments:
                         terminal output
 
 TODO: Option to add numerical sequences as prefixes and sufixes
-TODO: Option to remove a pattern from a file i.e., dates, timestamps, etc
 TODO: Option to run this script recursively
 '''
 
