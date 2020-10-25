@@ -6,9 +6,8 @@ Turn all letters uppercase, lowercase or title-case (first letter of every word
 uppercase). Add prefixes and sufixes for files, replace characters with your
 chosen delimiters, etc.
 
-USAGE: nama_nama.py DIRECTORY   [title|upper|lower]
-                                [separate] [split-at]
-                                [prefix] [sufix]
+USAGE: nama_nama.py DIRECTORY   [title|upper|lower] [separate] [split-at]
+                                [prefix] [sufix] [remove] [dry_run] [verbose]
 
 Rename files in a directory uniformly, choose the pattern between all
 uppercase, all lowercase or title-case (only first letter of every word
@@ -34,6 +33,11 @@ optional arguments:
                         existing dividers e.g., underscores, that you want to
                         get rid of (they will be replaced by the "--separate"
                         flag which defaults to a space)
+  -r REMOVE, --remove REMOVE
+                        Removes the matching characters if found on the
+                        filename. Use with care as changes are non-reversible,
+                        is recommended to run with the --dry-run flag enabled
+                        to see what the expected output would look like.
   -v, --verbose         Prints additional information to terminal output
   --dry-run             Processes files in memory and prints results to
                         terminal output
