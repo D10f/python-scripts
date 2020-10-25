@@ -6,11 +6,9 @@ Turn all letters uppercase, lowercase or title-case (first letter of every word
 uppercase). Add prefixes and sufixes for files, replace characters with your
 chosen delimiters, etc.
 
-$ nama_nama.py -h
-
-USAGE: nama_nama.py DIRECTORY [title|upper|lower]
-                              [separate] [split-at]
-                              [prefix] [sufix]
+USAGE: nama_nama.py DIRECTORY   [title|upper|lower]
+                                [separate] [split-at]
+                                [prefix] [sufix]
 
 Rename files in a directory uniformly, choose the pattern between all
 uppercase, all lowercase or title-case (only first letter of every word
@@ -40,8 +38,6 @@ optional arguments:
   --dry-run             Processes files in memory and prints results to
                         terminal output
 
-
-TODO: Actually modify the names of the files
 TODO: Option to add numerical sequences as prefixes and sufixes
 TODO: Option to remove a pattern from a file i.e., dates, timestamps, etc
 TODO: Option to run this script recursively
@@ -50,6 +46,7 @@ TODO: Option to run this script recursively
 import argparse
 import logging
 import pathlib
+import shutil
 import sys
 import os
 import re
@@ -71,23 +68,48 @@ def main():
     files = get_files(args.input_dir)
 
     # Rename files
-    logging.debug('Renaming...')
+    logging.debug('Processing...')
     renamed_files = rename_files(files, args)
 
-    # If dry run print results and exit program
+    # If dry run print results from memory and exit program
     if args.dry_run:
-        [print(file) for file in renamed_files]
-        logging.debug('Dry run enabled, exiting...')
+        logging.debug('Entering dry-run mode...')
+        for original, renamed in renamed_files:
+            print(f'[DR] Renaming: {original} -> {renamed}')
         sys.exit()
+
+    # Write changes to disk
+    logging.debug('Writing changes...')
+    write_files_to_disk(renamed_files, args)
+
+    logging.debug('End of program')
+
+
+def write_files_to_disk(files, args):
+    '''Renames the files list at the input directory specified'''
+
+    for original, renamed in files:
+        # Convert to their absolute path to avoid conflicting issues
+        o = os.path.join(args.input_dir, original)
+        r = os.path.join(args.input_dir, renamed)
+        shutil.move(o, r)
 
 
 def rename_files(files, args):
     '''Renames the files using the case convention provided. Returns a generator
-    expression that yields all filenames modified.'''
+    expression that yields a tuple with the original and modified filenames'''
+
+    # The following are regular expressions that are created when this function
+    # is first called. This avoids unnecessarily creating them on every file
+    # iteration, when they are actually used (a few lines below)
 
     # Split any dividers before joining the word string
     if args.split:
         split_at = re.compile(r'[+=\-_.,;:<>()\[\]\s]')
+
+    # Remove any characters specified
+    if args.remove:
+        remove_chars = re.compile(f'{args.remove}')
 
     for file in files:
         filename, ext = os.path.splitext(file)
@@ -96,6 +118,11 @@ def rename_files(files, args):
         if args.split:
             logging.debug('Replacing split regex...')
             filename = split_at.sub(args.separate, filename)
+
+        # Removes any characters matching the provided string
+        if args.remove:
+            logging.debug(f'Removing {args.remove} from filename')
+            filename = remove_chars.sub('', filename)
 
         logging.debug(f'Processing: {filename}')
         filename = filename.split(args.separate)
@@ -120,7 +147,7 @@ def rename_files(files, args):
 
         renamed_file = args.separate.join(renamed) + ext
 
-        yield renamed_file
+        yield (file, renamed_file)
 
 
 def get_files(dir):
@@ -185,6 +212,11 @@ def parse_arguments():
         dividers e.g., underscores, that you want to get rid of (they will be
         replaced by the "--separate" flag which defaults to a space)''',
         action='store_true'
+    )
+    parser.add_argument('-r', '--remove',
+        help='''Removes the matching characters if found on the filename. Use
+        with care as changes are non-reversible, is recommended to run with the
+        --dry-run flag enabled to see what the expected output would look like.'''
     )
     parser.add_argument('-v', '--verbose',
         help='Prints additional information to terminal output',
