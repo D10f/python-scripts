@@ -102,7 +102,7 @@ def transform_message(message, key, operation):
             transformed_message.append(enciphered)
 
             # Rotate the subkey on each iteration
-            key_idx += 1 if key_idx == len(key) -1 else 0
+            key_idx += 1 if key_idx == (len(key) - 1) else 0
 
         else:
             # any non letter-characters remain the same
