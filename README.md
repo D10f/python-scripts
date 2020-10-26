@@ -132,3 +132,7 @@ $ simple_sub_cipher.py -f "Wvu Tqnqjwdl zp Wdrwv xznwoqnua, qw eoj joqa, wvduu w
 
 Tve Ministrl of Trutv contained, it eas said, tvree tvousand rooms above ground level... Scattered about London tvere eere bust tvree otver buildings of similar appearance and sife... Tvel eere tve vomes of tve four Ministries beteeen evicv tve entire apparatus of government eas divided. Tve Ministrl of Trutv, evicv concerned itself eitv nees, entertainment, education, and tve fine arts. Tve Ministrl of Peace, evicv concerned itself eitv ear. Tve Ministrl of Love, evicv maintained lae and order. And tve Ministrl of Plentl, evicv eas responsible for economic affairs.
 ```
+
+---
+#### [Vigenere Cipher](https://github.com/herokunt/python-scripts/blob/main/vigenere_cipher.py)
+Following along the "Cracking Codes With Python" book by Al Sweigart, this is an implementation of the Vigenere cipher that can be used from the command line.
