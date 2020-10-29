@@ -17,10 +17,11 @@ optional arguments:
                         encrypts the message using the provided key
   -d ciphertext, --decrypt ciphertext
                         decrypts the message using the provided key
+  -t, --test            test the encryption with several random strings and
+                        keys
   -k key, --key key     key value to used for encryption and decryption
   -v, --verbose         prints additional information to terminal output
-
-TODO: Add testing functionality
+  
 TODO: Read from and write to files
 TODO: Read from stdin, chain with others commands
 TODO: Frequency analysis to decrypt a message without the key
@@ -28,6 +29,7 @@ TODO: Frequency analysis to decrypt a message without the key
 
 import argparse
 import logging
+import random
 import sys
 import os
 
@@ -49,6 +51,10 @@ def main():
         logging.debug('Decrypting...')
         cleartext = decrypt(args.decrypt, args.key)
         print(cleartext)
+    
+    if args.test:
+        logging.debug('Testing...')
+        run_tests()
 
 
 def encrypt(cleartext, key):
@@ -111,6 +117,40 @@ def transform_message(message, key, operation):
     return ''.join(transformed_message)
 
 
+def run_tests():
+
+    '''Creates long pseudo-random strings and tests the encryption/decryption'''
+
+    logging.debug(f'Testing...')
+    SYMBOLS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+
+    # Set random seed to a predictable number for consistent results
+    random.seed(42)
+
+    for i in range(20):
+        # Create long string of scrambled letters
+        sample = SYMBOLS * random.randint(0, 100)
+        sample = list(sample)
+        random.shuffle(sample)
+        sample = ''.join(sample)
+
+        # Creates a 20-letter random key
+        key = ''.join([LETTERS[random.randint(0, 25)] for _ in range(20)])
+
+        # Encrypt and decrypt right back
+        ciphertext = transform_message(sample, key, 'encrypt')
+        cleartext = transform_message(ciphertext, key, 'decrypt')
+
+        # Exit if test didn't pass
+        if cleartext != sample:
+            logging.debug(f'Expected: {sample[:30].rjust(50, ".")}')
+            logging.debug(f'Received: {cleartext[:30].rjust(50, ".")}')
+            print('Test Failed!')
+            sys.exit()
+
+    print('[OK] All tests passed!')
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser()
     operations = parser.add_mutually_exclusive_group()
@@ -122,6 +162,10 @@ def parse_arguments():
     operations.add_argument('-d', '--decrypt',
         help='decrypts the message using the provided key',
         metavar='ciphertext'
+    )
+    operations.add_argument('-t', '--test',
+        help='test the encryption with several random strings and keys',
+        action='store_true'
     )
     parser.add_argument('-k', '--key',
         help='key value to used for encryption and decryption',
