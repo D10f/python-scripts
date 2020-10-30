@@ -68,6 +68,7 @@ Linuxsys.pdf
 Learn_Linux_In_5_Days.pdf
 ```
 
+---
 #### [Scanner](https://github.com/herokunt/python-scripts/blob/main/scanner.py)
 A simple but functional port scanner to find out which ports are open in your local network. Specify the host by IP or name, and optionally the range of ports to scan in the host.
 
@@ -78,6 +79,11 @@ Zombie Dice is a "press your luck" party dice game created by Steve Jackson Game
 ---
 #### [Conway's Game of Life](https://github.com/herokunt/python-scripts/blob/main/conway.py)
 The classic Game of Life has three simple rules, but can be complex enough to build entire computational systems with it; I highly recommend to watch the first few minutes of this [great talk about The Art of Code](https://www.youtube.com/watch?v=gdSlcxxYAA8). Following along the "Automating the Boring Stuff With Python" book by Al Sweigart this is an attempt to write the game in a (hopefully) cleaner and more pythonic way.
+
+
+---
+#### [Collatz Sequence](https://github.com/herokunt/python-scripts/blob/main/collatz.py)
+Following along the "Automating the Boring Stuff With Python" book by Al Sweigart this is a script that runs from the terminal, taking one number and following the "Collatz Conjecture" rules where any positive number will eventually and invariable be reduced down to 1.  
 
 ---
 #### [Caesar's cipher](https://github.com/herokunt/python-scripts/blob/main/caesar-chiper.py)
