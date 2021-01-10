@@ -45,6 +45,16 @@ Total lines of code.......................14504117
 ```
 
 ---
+#### [Password Checker](https://github.com/herokunt/python-scripts/blob/main/password_checker.py)
+Check your passwords against the popular "Have I Been Pwned?" website and find out if they've been leaked in any of the increasingly common data breaches. Your passwords provided to the script will remain secured as only a hash is used, as per the Have I Been Pwned API requires. You can provide passwords inline or through a CSV file, ideal if your password manager (such as KeePassXC) supports exporting data in CSV format (don't forget to delete your file afterwards!)
+
+```
+$ ./password_checker.py password1 password2 -f ~/Desktop/path_to_file.csv
+Found match for "pas..." 2427158 times!
+Found match for "pas..." 186833 times!
+```
+
+---
 #### [Nama Nama](https://github.com/herokunt/python-scripts/blob/main/nama_nama.py)
 "Nama" means name in some languages such as Malay or Indonesian. This small utility script will help organize any collection of files by renaming them uniformly, adding prefixes and sufixes, custom separators, etc. Ideal for music, images, books and other types of documents that have uneven format (mixed of uppercase and lowercase, underscores with spaces, etc). Before, and after:
 
