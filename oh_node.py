@@ -41,6 +41,8 @@ def main():
     logging.debug(f'Found {total_files} total files with {len(types)} different extensions and a total of {total_size}')
     print(''.rjust(50, '-'))
 
+    # TODO: Cleanup this spacing function calls syntax
+
     # Total files, and most common extension
     print("Total files".ljust(20, '.') + f"{str(total_files)}".rjust(30, '.'))
 

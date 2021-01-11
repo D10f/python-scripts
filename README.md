@@ -1,8 +1,9 @@
 # python-scripts
-A collection of several small scripts written in Python
+
+A collection of small scripts written in Python and implemented as command line utility programs.
 
 #### [Batch Resizer](https://github.com/herokunt/python-scripts/blob/main/batch-resizer.py)
-Batch resizer is a small utility script that looks at a directory and processes all images in it in some way. You can resize them, convert them into other formats or bundle them together in a nice compressed archive, ready to be uploaded. Some examples: 
+Batch resizer is a small utility script that looks at a directory and processes all images in it in some way. You can resize them, convert them into other formats or bundle them together in a nice compressed archive, ready to be uploaded. Some examples:
 
 ```
 # Resize all images to a specified width and height (aspect ratio preserved)
@@ -23,7 +24,7 @@ $ resizer.py ~/Pictures -o ~/Desktop -r 1200 1200 -f webp -t -d
 ---
 #### [Oh, Node!](https://github.com/herokunt/python-scripts/blob/main/oh_node.py)
 Curious about how many files does that node_modules folder has in it? How many lines of code? What kind of files are in there? This small utility script will find out for you exactly that!
- 
+
 ```
 $ oh_node.py ~/Projects/ -t 10
 oh_node.py - Scan Complete
@@ -46,12 +47,16 @@ Total lines of code.......................14504117
 
 ---
 #### [Password Checker](https://github.com/herokunt/python-scripts/blob/main/password_checker.py)
-Check your passwords against the popular "Have I Been Pwned?" website and find out if they've been leaked in any of the increasingly common data breaches. Your passwords provided to the script will remain secured as only a hash is used, as per the Have I Been Pwned API requires. You can provide passwords inline or through a CSV file, ideal if your password manager (such as KeePassXC) supports exporting data in CSV format (don't forget to delete your file afterwards!)
+Check your passwords against the popular "Have I Been Pwned?" website and find out if they've been leaked in any of the increasingly common data breaches. Your passwords provided to the script will remain secured as only a hash is used, as per the Have I Been Pwned API requires.
+
+You can provide passwords inline or through a CSV file, ideal if your password manager (such as KeePassXC) supports exporting data in CSV format. For security you can instruct the script to securely delete that file from your hard drive by overwriting the original contents with random bytes before deleting it.
 
 ```
-$ ./password_checker.py password1 123456 -f ~/Desktop/path_to_file.csv
+$ ./password_checker.py password1 123456 -f ~/Desktop/path_to_file.csv --delete --verbose
+Found match for "Gmail" 1444 times!
 Found match for "pas..." 2427158 times!
 Found match for "123..." 24230577 times!
+DEBUG:root:Securely deleting file (3 rounds...)
 ```
 
 ---
@@ -67,7 +72,7 @@ $ ls ~/Documents/books/linux
 'Linux BASH Programming Cookbook.pdf'
  linuxsys.pdf
  sed.pdf
- 
+
 $ nama_nama.py ~/Documents/books/linux --title --split --separate _ --dry-run
 Ansible_For_Devops.epub
 Sed.pdf
