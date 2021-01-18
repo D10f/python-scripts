@@ -101,7 +101,7 @@ The classic Game of Life has three simple rules, but can be complex enough to bu
 Following along the "Automating the Boring Stuff With Python" book by Al Sweigart this is a script that runs from the terminal, taking one number and following the "Collatz Conjecture" rules where any positive number will eventually and invariable be reduced down to 1.  
 
 ---
-#### [Caesar's cipher](https://github.com/herokunt/python-scripts/blob/main/caesar-chiper.py)
+#### [Caesar's cipher](https://github.com/herokunt/python-scripts/blob/main/ciphers/caesar-chiper.py)
 One of the most popular ciphers used over 2000 years ago. Following along the "Cracking Codes With Python" book by Al Sweigart, this is an attempt to create an improved and flexible implementation of the cipher that works from the command line. It supports the expected operations of encryption, decryption as well as key derivation and brute forcing.
 
 ```
@@ -115,7 +115,7 @@ The key used to encrypt this message was 17
 ```
 ---
 
-#### [Transposition cipher](https://github.com/herokunt/python-scripts/blob/main/transposition-cipher.py)
+#### [Transposition cipher](https://github.com/herokunt/python-scripts/blob/main/ciphers/transposition-cipher.py)
 A cipher that works by laying the letters of a message in a grid of varying size and encrypting the message from it. Following along the "Cracking Codes With Python" book by Al Sweigart, this is an attempt to create an improved and flexible implementation of the cipher that works from the command line. It supports the expected operations of encryption, decryption as well as key derivation and brute forcing.
 
 ```
@@ -129,7 +129,7 @@ Batch resizer is a small utility script that looks at a directory and processes 
 ```
 
 ---
-#### [Affine Cipher](https://github.com/herokunt/python-scripts/blob/main/affine_cipher.py)
+#### [Affine Cipher](https://github.com/herokunt/python-scripts/blob/main/ciphers/affine_cipher.py)
 A combination of the Caesar cipher and Multiplicative cipher to create stronger encryption. Following along the "Cracking Codes With Python" book by Al Sweigart, this script is very simple to use from the command line to encrypt, decrypt or brute force any ciphertext encrypted using this cipher.
 
 ```
@@ -139,7 +139,7 @@ The encryption key is: 4351
 ```
 
 ---
-#### [Simple Substitution Cipher](https://github.com/herokunt/python-scripts/blob/main/simple_sub_cipher.py)
+#### [Simple Substitution Cipher](https://github.com/herokunt/python-scripts/blob/main/ciphers/simple_sub_cipher.py)
 A substitution cipher uses a re-arranged alphabet (in this case English alphabet) as the key to encrypt a message. This results in too many possible combinations to brute force through each of them in a reasonable amount of time, but can be hacked through cross-referencing each letter from the message. Because of this, it's also most effective the longer the encrypted message. Following along the "Cracking Codes With Python" book by Al Sweigart, this is an implementation that can be used from the command line.
 
 Encryption:
@@ -158,5 +158,5 @@ Tve Ministrl of Trutv contained, it eas said, tvree tvousand rooms above ground 
 ```
 
 ---
-#### [Vigenere Cipher](https://github.com/herokunt/python-scripts/blob/main/vigenere_cipher.py)
+#### [Vigenere Cipher](https://github.com/herokunt/python-scripts/blob/main/ciphers/vigenere_cipher.py)
 Following along the "Cracking Codes With Python" book by Al Sweigart, this is an implementation of the Vigenere cipher that can be used from the command line.
