@@ -1,211 +1,145 @@
 #!/usr/bin/python3
 
 """
-Process all images inside a directory: resize them, convert to different formats,
-remove metadata, add watermarks and compress it all nicely for upload or share
-online.
+Process images by converting them to different formats, resizing them and store
+them as compressed archives for easy uplaod to your cloud. You may provide one
+or more images and they'll be processed in parallel for extra speed.
 
-USAGE: resizer.py INPUT_FOLDER [OPTIONS]
+usage: imgtest.py [-h] [-v] [-o [OUTPUT]] [-r WIDTH HEIGHT]
+                  [-f {webp,jpeg,jpg,png} [{webp,jpeg,jpg,png} ...]]
+                  [-z | -t [ARCHIVE]]
+                  input [input ...]
 
-TODO: Option to convert to multiple image formats and add support for more formats.
+positional arguments:
+  input                 A single or multiple image files to process
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -v, --verbose         Writes output to the terminal as the program runs
+  -o [OUTPUT], --output [OUTPUT]
+                        Directory where processed images will be saved to
+  -r WIDTH HEIGHT, --resize WIDTH HEIGHT
+                        Pixel width and height of the output image (preserves
+                        aspect-ratio)
+  -f {webp,jpeg,jpg,png} [{webp,jpeg,jpg,png} ...], --format {webp,jpeg,jpg,png} [{webp,jpeg,jpg,png} ...]
+                        Convert processed file to the selected image format
+  -z, --zip-archive     Store processed images as .zip archive (uncompressed)
+  -t [ARCHIVE], --tar-archive [ARCHIVE]
+                        Store processed images as .tar.gz archive (compressed)
+
 TODO: Option to provide an image to add as a watermark for each image
-TODO: Option to preserve original metadata into the processed image
-TODO: Option to generate each output image's name using image recognition
 """
 
 from PIL import Image
 from itertools import repeat
-from pathlib import Path
 import concurrent.futures
 import argparse
-import zipfile
-import tarfile
-import hashlib
-import shutil
-import sys
-import os
-import re
 import logging
+import tarfile
+import zipfile
+import re
+import os
 
-def main(args):
-
+def main():
     args = parse_arguments()
-    if args.verbose == 1:
-        logging.basicConfig(level=logging.INFO)
 
-    # What files will be processed
-    valid_files = re.compile(r'.*\.(jpg|jpeg|png|webp)$', re.IGNORECASE)
-    images = [file for file in os.listdir(args.input_dir) if valid_files.match(file)]
+    valid_ext = re.compile(r'.*\.(jpe?g|png|webp)$', re.IGNORECASE)
+    images = [file for file in args.input if valid_ext.match(file)]
 
-    # For logging purposes only
-    get_images_size = (os.path.getsize(args.input_dir / img) for img in images)
-    logging.info(f'{len(images)} images found ({round(sum(get_images_size) / 1000000, 2)} Mb...)')
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+        print('Dimensions:', args.dimensions)
+        print('Output:', args.output)
+        print('Convert to:', args.format)
+        print(f'Found {len(images)} images:')
 
-    # Process each file using multi-processing
+    # Process each file using multi-processing, returns extensions used
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        executor.map(process_image, images, repeat(args))
+        formats = executor.map(process_image, images, repeat(args))
 
-    # If an archive flag was passed, make an archive for all the files
+    # Creates an archive with the output images.
     if args.archive:
-        make_archive(args)
-
-    # If the delete flag was passed, delete processed files
-    if args.delete_original:
-        delete_processed(images, args)
+        make_archive(args, images, next(formats))
 
 
-def process_image(file, args):
+def make_archive(args, input, formats):
+    '''Creates an archive of the specified format to store output images.'''
 
-    '''Resizes the image, saves it and if specified it renames it using a hash
-    function to randomize its name'''
+    # Store a list of image filenames without their full path or file format
+    images = [os.path.splitext(i)[0].split(os.path.sep)[-1] for i in input]
 
-    logging.info(f'Processing {file}...')
+    # Store the file extensions used for this script execution
+    formats = set([format.replace('jpg', 'jpeg') for format in formats])
 
-    filename, _ = os.path.splitext(file)
-    with Image.open(args.input_dir / file) as img:
-        # Get relevant data for the new image
-        width = args.dimensions[0] if args.dimensions else img.width
-        height = args.dimensions[1] if args.dimensions else img.height
-        format = args.format if args.format else img.format
+    archive_name = os.path.join(args.output, f'{args.archive}.tar.gz')
 
-        # Obscure filename with a hashing function
-        if args.hash_names:
-            logging.info(f'Hashing filename...')
-            filename = hashlib.sha1(file.encode('utf-8')).hexdigest()
+    logging.debug(f'Building archive {archive_name}...')
 
-        # Create new image file with specified dimensions
+    with tarfile.open(archive_name, 'x:gz') as tar:
+        for img in images:
+            for ext in formats:
+                file_to_add = f'{args.output}{os.path.sep}resized-{img}.{ext}'
+                tar.add(file_to_add, arcname=f'resized-{img}.{ext}')
+
+
+def process_image(image, args):
+    '''Takes an image file path and process it according to provided arguments'''
+
+    filename, ext = os.path.splitext(os.path.basename(image))
+    formats = args.format if args.format else [ext.replace('.', '')]
+
+    # Append short hash to filename to avoid accidental overwrite
+    filename = f'resized-{filename}'
+
+    logging.debug(f'Processing file {filename}')
+
+    with Image.open(image) as img:
+        # Find width, height and output file format
+        width   = args.dimensions[0] if args.dimensions else img.width
+        height  = args.dimensions[1] if args.dimensions else img.height
+
+        # Resize image to specified dimensions
         img.thumbnail((width, height))
-        img.save(f'{args.output_dir / filename}.{format.lower()}', format.upper())
 
+        # Save image for each specified format
+        for f in formats:
+            format = 'JPEG' if f.lower().endswith('jpg') else f.upper()
+            filepath = f'{os.path.join(args.output, filename)}.{format.lower()}'
+            img.save(filepath, format)
 
-def make_archive(args):
+    return formats
 
-    '''Creates an archive of the specified format to store all processed images.'''
-
-    archive_location = args.output_dir.parent
-
-    # Create archive in tar format
-    if args.archive == 'gz':
-        with tarfile.open(archive_location / 'processed_images.tar.gz', 'x:gz') as tar:
-            tar.add(args.output_dir, arcname='images')
-
-    # Create archive in zip format
-    if args.archive == 'ZIP_STORED':
-        with zipfile.ZipFile(archive_location / 'processed_images.zip', 'w') as zip:
-            os.chdir(args.output_dir)
-            for file in os.listdir(args.output_dir):
-                zip.write(file)
-
-
-    # Once archive is created we can delete the output directory
-    logging.info(f'Archive created, removing output directory...')
-    shutil.rmtree(args.output_dir)
-
-
-def delete_processed(images, args):
-
-    '''Deletes all files that were processed'''
-
-    logging.info(f'Deleting originals...')
-    for img in images:
-        os.unlink(args.input_dir / img)
-
-
-def get_input_directory(path):
-
-    '''Verifies the path provided and returns it as a Path object'''
-
-    p = Path(path)
-    if p.exists() and p.is_dir():
-        return p.resolve()
-    else:
-        msg = f'{path} is not a valid directory or does not exist'
-        raise argparse.ArgumentTypeError(msg)
-
-
-def get_output_directory(path):
-
-    '''Verifies the path provided and returns it as a Path object. It'll
-    create any necessary directories if they don't exist'''
-
-    p = Path(path) / 'processed_images'
-    if p.exists() and p.is_dir():
-        return p.resolve()
-    elif p.exists() and not p.is_dir():
-        msg = f'{path} is not a valid directory'
-        raise argparse.ArgumentTypeError(msg)
-    else:
-        dir = p.resolve()
-        os.makedirs(dir)
-        return dir
-
-
-def get_watermark_image(path):
-
-    '''Verifies the path provided and returns an Image object'''
-
-    p = Path(path)
-    if p.exists() and p.is_file():
-        with Image.open(p.resolve()) as img:
-            return img
-    else:
-        msg = f'{path} is not a valid file or does not exist'
-        raise argparse.ArgumentTypeError(msg)
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(
-        description='Bulk image processor - resize, convert and organize your images'
+    '''Parses the arguments used to call this script'''
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-v', '--verbose',
+        help='Writes output to the terminal as the program runs',
+        action='store_true'
     )
-    parser.add_argument('input_dir',
-        help='Directory location with all images',
-        metavar='input_file',
-        type=get_input_directory
+    parser.add_argument('input',
+        help='A single or multiple image files to process',
+        nargs='+'
     )
     parser.add_argument('-o', '--output',
-        help='Choose the location for output images (defaults to current directory)',
-        dest='output_dir',
-        metavar='output_dir',
-        type=get_output_directory,
+        help='Directory where processed images will be saved to',
+        nargs='?',
         default=os.getcwd()
     )
     parser.add_argument('-r', '--resize',
-        help='Resize images to width and height, preserves aspect-ratio',
-        dest='dimensions',
-        metavar=('width', 'height'),
+        help='Pixel width and height of the output image (preserves aspect-ratio)',
+        nargs=2,
         type=int,
-        nargs=2
+        metavar=('WIDTH', 'HEIGHT'),
+        dest='dimensions'
     )
     parser.add_argument('-f', '--format',
-        help='Converts image to specified format',
-        dest='format',
-        choices=['jpg', 'jpeg', 'png', 'webp']
-    )
-    parser.add_argument('-m', '--metadata',
-        help="Preserves the original image's metadata",
-        dest='metadata',
-        action='store_true'
-    )
-    parser.add_argument('-u', '--use-hash',
-        help='Obscure output filenames using a hashing function',
-        dest='hash_names',
-        action='store_true'
-    )
-    parser.add_argument('-d', '--delete',
-        help='Deletes original images upon completion',
-        dest='delete_original',
-        action='store_true'
-    )
-    parser.add_argument('-w', '--watermark',
-        help='Blends the provided image into the processed output',
-        dest='watermark',
-        metavar='image_file',
-        type=get_watermark_image
-    )
-    parser.add_argument('-v', '--verbose',
-        help='Writes output to the terminal as the program runs',
-        dest='verbose',
-        action='count',
-        default=0
+        help='Convert processed file to the selected image format',
+        nargs='+',
+        action='store',
+        choices=['webp', 'jpeg', 'jpg', 'png']
     )
     archive_options = parser.add_mutually_exclusive_group()
     archive_options.add_argument('-z', '--zip-archive',
@@ -217,11 +151,11 @@ def parse_arguments():
     archive_options.add_argument('-t', '--tar-archive',
         help='Store processed images as .tar.gz archive (compressed)',
         dest='archive',
-        action='store_const',
-        const='gz'
+        nargs='?',
+        const='output'
     )
-
     return parser.parse_args()
+
 
 if __name__ == '__main__':
     main()
