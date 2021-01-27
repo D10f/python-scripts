@@ -2,10 +2,10 @@
 
 """
 Process images by converting them to different formats, resizing them and store
-them as compressed archives for easy uplaod to your cloud. You may provide one
+them as compressed archives for easy upload to your cloud. You may provide one
 or more images and they'll be processed in parallel for extra speed.
 
-usage: imgtest.py [-h] [-v] [-o [OUTPUT]] [-r WIDTH HEIGHT]
+usage: batch-resizer.py [-h] [-v] [-o [OUTPUT]] [-r WIDTH HEIGHT]
                   [-f {webp,jpeg,jpg,png} [{webp,jpeg,jpg,png} ...]]
                   [-z | -t [ARCHIVE]]
                   input [input ...]
@@ -48,9 +48,6 @@ def main():
 
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
-        print('Dimensions:', args.dimensions)
-        print('Output:', args.output)
-        print('Convert to:', args.format)
         print(f'Found {len(images)} images:')
 
     # Process each file using multi-processing, returns extensions used
@@ -80,6 +77,9 @@ def make_archive(args, input, formats):
             for ext in formats:
                 file_to_add = f'{args.output}{os.path.sep}resized-{img}.{ext}'
                 tar.add(file_to_add, arcname=f'resized-{img}.{ext}')
+
+                # Delete the file once is moved into the archive
+                os.remove(file_to_add)
 
 
 def process_image(image, args):

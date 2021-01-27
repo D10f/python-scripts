@@ -3,22 +3,38 @@
 A collection of small scripts written in Python and implemented as command line utility programs.
 
 #### [Batch Resizer](https://github.com/herokunt/python-scripts/blob/main/batch-resizer.py)
-Batch resizer is a small utility script that looks at a directory and processes all images in it in some way. You can resize them, convert them into other formats or bundle them together in a nice compressed archive, ready to be uploaded. Some examples:
+Process images by converting them to different formats, resizing them and store them as compressed archives for easy upload to your cloud. You may provide one or more images and they'll be processed in parallel for extra speed. File metadata like GPS location, camera model, etc., is completely removed.
+
+- TODO: add support to embed watermark image
+- TODO: add support to resize to multiple sizes at once
+- TODO: create output directory if does not exist
 
 ```
-# Resize all images to a specified width and height (aspect ratio preserved)
-$ resizer.py ~/Pictures --resize 1200 1200
+# Resize images to a specified width and height (aspect ratio preserved)
+$ resizer.py ~/Pictures/* --resize 600 600
 
-# Convert all images to the specified format (jpg, png or webp)
-$ resizer.py ~/Pictures --format webp
+# Convert images to the specified format or formats (JPEG, PNG or WEBP)
+$ resizer.py ~/Pictures/* --format jpeg webp
 
-# Add a watermark to all images:
-$ resizer.py ~/Pictures --watermark ~/logo.png
+# Provide target directory for output images
+$ resizer.py ~/Pictures/* --output ~/Desktop
 
-# Resize images to 1200x1200 pixels, convert them to webp format,
-# store them in the desktop, compressed as a .tar.gz archive and delete all of the
-# original images afterwards
-$ resizer.py ~/Pictures -o ~/Desktop -r 1200 1200 -f webp -t -d
+# Create an archive for the output processed images with a custom name
+$ resizer.py ~/Pictures/* -o ~/Desktop -t backup
+```
+
+---
+#### [Password Checker](https://github.com/herokunt/python-scripts/blob/main/password_checker.py)
+Check your passwords against the popular "Have I Been Pwned?" website and find out if they've been leaked in any of the increasingly common data breaches. Your passwords provided to the script will remain secured as only a hash is used, as per the Have I Been Pwned API requires.
+
+You can provide passwords inline or through a CSV file, ideal if your password manager (such as KeePassXC) supports exporting data in CSV format. For security you can instruct the script to securely delete that file from your hard drive by overwriting the original contents with random bytes before deleting it.
+
+```
+$ ./password_checker.py password1 123456 -f ~/Desktop/path_to_file.csv --delete --verbose
+Found match for "Gmail" 1444 times!
+Found match for "pas..." 2427158 times!
+Found match for "123..." 24230577 times!
+DEBUG:root:Securely deleting file (3 rounds...)
 ```
 
 ---
@@ -43,20 +59,6 @@ Total files.................................129514
   txt..........................................362
 Total size.................................657.9MB
 Total lines of code.......................14504117
-```
-
----
-#### [Password Checker](https://github.com/herokunt/python-scripts/blob/main/password_checker.py)
-Check your passwords against the popular "Have I Been Pwned?" website and find out if they've been leaked in any of the increasingly common data breaches. Your passwords provided to the script will remain secured as only a hash is used, as per the Have I Been Pwned API requires.
-
-You can provide passwords inline or through a CSV file, ideal if your password manager (such as KeePassXC) supports exporting data in CSV format. For security you can instruct the script to securely delete that file from your hard drive by overwriting the original contents with random bytes before deleting it.
-
-```
-$ ./password_checker.py password1 123456 -f ~/Desktop/path_to_file.csv --delete --verbose
-Found match for "Gmail" 1444 times!
-Found match for "pas..." 2427158 times!
-Found match for "123..." 24230577 times!
-DEBUG:root:Securely deleting file (3 rounds...)
 ```
 
 ---
