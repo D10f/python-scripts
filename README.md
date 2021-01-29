@@ -5,10 +5,6 @@ A collection of small scripts written in Python and implemented as command line 
 #### [Batch Resizer](https://github.com/herokunt/python-scripts/blob/main/batch-resizer.py)
 Process images by converting them to different formats, resizing them and store them as compressed archives for easy upload to your cloud. You may provide one or more images and they'll be processed in parallel for extra speed. File metadata like GPS location, camera model, etc., is completely removed.
 
-- TODO: add support to embed watermark image
-- TODO: add support to resize to multiple sizes at once
-- TODO: create output directory if does not exist
-
 ```
 # Resize images to a specified width and height (aspect ratio preserved)
 $ resizer.py ~/Pictures/* --resize 600 600

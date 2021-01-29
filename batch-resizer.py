@@ -5,6 +5,8 @@ Process images by converting them to different formats, resizing them and store
 them as compressed archives for easy upload to your cloud. You may provide one
 or more images and they'll be processed in parallel for extra speed.
 
+# TODO: add support to embed watermark image
+
 usage: batch-resizer.py [-h] [-v] [-o [OUTPUT]] [-r WIDTH HEIGHT]
                   [-f {webp,jpeg,jpg,png} [{webp,jpeg,jpg,png} ...]]
                   [-z | -t [ARCHIVE]]
@@ -26,8 +28,6 @@ optional arguments:
   -z, --zip-archive     Store processed images as .zip archive (uncompressed)
   -t [ARCHIVE], --tar-archive [ARCHIVE]
                         Store processed images as .tar.gz archive (compressed)
-
-TODO: Option to provide an image to add as a watermark for each image
 """
 
 from PIL import Image
@@ -47,14 +47,18 @@ def main():
     images = [file for file in args.input if valid_ext.match(file)]
 
     if args.verbose:
-        logging.basicConfig(level=logging.DEBUG)
-        print(f'Found {len(images)} images:')
+        logging.basicConfig(level=logging.INFO)
+        logging.info(args)
+        logging.info(f'Found {len(images)} images:')
 
-    # Process each file using multi-processing, returns extensions used
+    if not os.path.exists(args.output):
+        os.makedirs(args.output)
+
+    # Process images concurrently
     with concurrent.futures.ProcessPoolExecutor() as executor:
         formats = executor.map(process_image, images, repeat(args))
 
-    # Creates an archive with the output images.
+    # Creates an archive with all output images.
     if args.archive:
         make_archive(args, images, next(formats))
 
@@ -70,7 +74,7 @@ def make_archive(args, input, formats):
 
     archive_name = os.path.join(args.output, f'{args.archive}.tar.gz')
 
-    logging.debug(f'Building archive {archive_name}...')
+    logging.info(f'Building archive {archive_name}...')
 
     with tarfile.open(archive_name, 'x:gz') as tar:
         for img in images:
@@ -89,9 +93,12 @@ def process_image(image, args):
     formats = args.format if args.format else [ext.replace('.', '')]
 
     # Append short hash to filename to avoid accidental overwrite
-    filename = f'resized-{filename}'
+    if args.dimensions:
+        filename = f'{filename}-{args.dimensions[0]}'
+    elif not args.format and not args.dimensions:
+        filename = f'{filename}-copy'
 
-    logging.debug(f'Processing file {filename}')
+    logging.info(f'Processing file {filename}')
 
     with Image.open(image) as img:
         # Find width, height and output file format
@@ -105,7 +112,12 @@ def process_image(image, args):
         for f in formats:
             format = 'JPEG' if f.lower().endswith('jpg') else f.upper()
             filepath = f'{os.path.join(args.output, filename)}.{format.lower()}'
-            img.save(filepath, format)
+
+            # Accounts for JPEG files without alpha channel
+            if format == 'JPEG':
+                img.convert('RGB').save(filepath, format)
+            else:
+                img.save(filepath, format)
 
     return formats
 
