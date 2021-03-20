@@ -7,6 +7,7 @@ take up in your computer? Neither do I! Let's find out...
 Usage: node_way.py ROOT_DIR [-v verbose][-t top extensions]
 
 TODO: ignore binary type formats (images, executables, etc)
+TODO: include rich module for better looking output (and cleaner code too)
 '''
 
 from pathlib import Path
@@ -15,7 +16,6 @@ import logging
 import time
 import os
 import re
-
 
 def main():
     args = parse_arguments()
