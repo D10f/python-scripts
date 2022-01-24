@@ -11,6 +11,7 @@ TODO: include rich module for better looking output (and cleaner code too)
 '''
 
 from pathlib import Path
+import sys
 import argparse
 import logging
 import time
@@ -26,7 +27,7 @@ def main():
 
     # total number of files, extenion count and total size (in bytes)
     logging.debug('Counting files...')
-    files, types, size = count_files(args.root_dir)
+    files, types, size = count_files(find_node_modules(args.root_dir))
 
     # Calculate and format data
     total_files = len(files)
@@ -53,6 +54,19 @@ def main():
 
     print('Total size'.ljust(20, '.') + f'{total_size}'.rjust(30, '.'))
     print('Total lines of code'.ljust(20, '.') + f'{str(total_lines)}'.rjust(30, '.'))
+
+
+def find_node_modules(root_dir):
+  '''Checks for the presence of a node_modules directory and returns the full
+  path to that location based on the input root_dir'''
+
+  root_dir_abs = os.path.abspath(root_dir)
+
+  if 'node_modules' not in os.listdir(root_dir_abs):
+    print(f'node_modules not found in {root_dir_abs}')
+    sys.exit(1)
+  
+  return os.path.join(root_dir_abs, 'node_modules')
 
 
 def top_extensions(types, top=5):
@@ -118,8 +132,8 @@ def count_files(root_dir):
     for current, dirs, files in os.walk(root_dir):
 
         # ignore files not within a node_modules directory
-        if 'node_modules' not in current:
-            continue
+        # if 'node_modules' not in current:
+        #     continue
 
         for file in files:
             try:
