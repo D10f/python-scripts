@@ -132,8 +132,7 @@ def move_files(files, force = False, dry = False):
 
   for file in files:
     for directory in FILE_EXT_ASSOCIATIONS:
-      if file.suffix.lower() in FILE_EXT_ASSOCIATIONS[directory]:
-
+      if ''.join(file.suffixes) in FILE_EXT_ASSOCIATIONS[directory]:
         file_already_exists = is_file_in_dir(file.name, directory)
 
         if file_already_exists and not force:
@@ -173,10 +172,10 @@ def select_files(src_dir, ignore_extensions = None, only_extensions = None, patt
     ext_filters = [f'.{ext}' if not ext.startswith('.') else ext for ext in ignore_extensions]
     src_dir_files = [x for x in src_dir_files if x.suffix not in ext_filters]
 
-  # Convert 'x' from path-like string. Use filename only for regexp lookup.
+  # Combine stem and suffix to get full filename, including multiple extensions
   if pattern:
     regexp = re.compile(pattern)
-    src_dir_files = [x for x in src_dir_files if regexp.search(str(x.stem))]
+    src_dir_files = [x for x in src_dir_files if regexp.search(f'{x.stem}{x.suffix}')]
 
   return src_dir_files
 
