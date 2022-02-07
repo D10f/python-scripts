@@ -1,14 +1,13 @@
 #! /usr/bin/python3
 
-from pprint import pprint
-
 from pathlib import Path
 import argparse
 import logging
 import shutil
-import sys
 import os
 import re
+
+# TODO: Allow using -f to force overwrite existing files, or create copies
 
 # DEFAULT HOME DIRECTORIES
 
@@ -90,17 +89,17 @@ def move_files(files, force = False, dry = False):
         file_already_exists = is_file_in_dir(file.name, directory)
 
         if file_already_exists and not force:
-          logging.warn(f'File {file.name} already exists in dest. Skipping...')
+          logging.warning(f'Destination path {Path.joinpath(directory, file.name)} already exists. Skipping...')
           continue
 
         if not dry:
           # path-like objects only supported on Python3.9+
-          shutil.move(str(file), str(directory))          
+          shutil.move(str(file), str(directory))
 
         logging.info(f'Moving {file} to {directory}')
         
         if file_already_exists:
-          logging.warn(f'-f flag provided! Overwriting {Path.joinpath(directory, file.name)}')
+          logging.warning(f'-f flag provided! Overwriting {Path.joinpath(directory, file.name)}')
 
         continue
 
@@ -108,7 +107,7 @@ def move_files(files, force = False, dry = False):
 def is_file_in_dir(filename, directory):
   'Checks if the provided filename already exists in the given directory'
 
-  return filename in [str(x) for x in Path.iterdir(directory)]
+  return filename in [x.name for x in Path.iterdir(directory)]
 
 
 def select_files(src_dir, ignore_extensions = None, only_extensions = None, pattern = None):
@@ -187,7 +186,7 @@ def print_arguments(args):
     logging.info(f'Running with force option enabled.')
   
   if args.dry:
-    logging.debug(f'Running with dry-run option enabled.')
+    logging.info(f'Running with dry-run option enabled.')
 
   if args.verbose > 1:
     logging.debug(f'Using file associations')
