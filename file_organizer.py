@@ -1,5 +1,53 @@
 #! /usr/bin/python3
 
+'''
+usage: file_organizer.py [-h] [-s SRC] [-o extension [extension ...] | -i extension [extension ...]] [-f] [-e regexp] [-m dir=.ext1,.ext2] [--dry-run] [-v]
+                         [--version]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -s SRC, --src SRC     Source directory to read files from. Defaults to ~/Downloads
+  -o extension [extension ...], --only extension [extension ...]
+                        Performs the action only on the specified extensions
+  -i extension [extension ...], --ignore extension [extension ...]
+                        Ignores the specified file extensions
+  -f, --force           Overwrites existing files in target directory
+  -e regexp, --regexp regexp
+                        Uses regular expression matching to filter down results.
+  -m dir=.ext1,.ext2, --map dir=.ext1,.ext2
+                        Overwrite custom file extension to a specific path
+  --dry-run             Runs the script without writing changes to disk
+  -v, --verbose         Produce extended output
+  --version             show program's version number and exit
+
+
+examples:
+
+Move only files with extension mp4 and wav ignore the rest
+./file_organizer.py -o mp4 wav
+
+Do not move files with extensions mp4 wav
+./file_organizer.py -i mp4 wav
+
+Move epub and pdf files to ~/Sync/Books (default for those two is ~/Documents)
+./file_organizer.py -m ~/Sync/Books=epub,pdf
+
+Move only epub files to ~/Sync/Books (default for those two is ~/Documents)
+./file_organizer.py -o epub -m ~/Sync/Books=epub,pdf
+
+Move files from ~/Desktop (default is to move from ~/Downloads)
+./file_organizer.py -s ~/Desktop
+
+Only move files that start with "distr", case sensitive e.g.: Distributed_Systems_With_Node_js.epub
+./file_organizer.py -e '^Distr'
+
+Run in test mode to verify changes before actually writing to disk
+./file_organizer.py --dry-run
+
+Check script's version
+./file_organizer.py --version
+'''
+
 from pathlib import Path
 import argparse
 import logging
