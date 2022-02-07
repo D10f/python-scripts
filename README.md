@@ -34,27 +34,37 @@ DEBUG:root:Securely deleting file (3 rounds...)
 ```
 
 ---
-#### [Oh, Node!](https://github.com/herokunt/python-scripts/blob/main/oh_node.py)
-Curious about how many files does that node_modules folder has in it? How many lines of code? What kind of files are in there? This small utility script will find out for you exactly that!
+#### [File Organizer](https://github.com/herokunt/python-scripts/blob/main/file_organizer.py)
+Automate the boring task of organizing your file system: random downloads from the internet, received in chat groups or recovered from an old drive. This script runs on the Downloads folder by default and simply moves the files around based on the extension. Coupled with a scheduler like `cron` you can create powerful customizations via the command line to suit your needs.
+
+For best results use in conjunction with the following script in the list to keep your file system well organized, automatically!
+
+```bash
+# Move only files with extension mp4 and wav ignore the rest
+./file_organizer.py -o mp4 wav
+
+# Do not move files with extensions mp4 wav
+./file_organizer.py -i mp4 wav
+
+# Move all .epub and .pdf files to ~/Sync/Books (default for those two is ~/Documents)
+./file_organizer.py -m ~/Sync/Books=epub,pdf
+
+# Move files from ~/Desktop (default is to move from ~/Downloads)
+./file_organizer.py -s ~/Desktop
+
+# Only move files that start with "distr", case sensitive e.g.: Distributed_Systems_With_Node_js.epub
+./file_organizer.py -e '^Distr'
+
+# Run in test mode to verify changes before actually writing to disk
+./file_organizer.py --dry-run
+```
 
 ```
-$ oh_node.py ~/Projects/ -t 10
-oh_node.py - Scan Complete
---------------------------------------------------
-Total files.................................129514
-  Showing 10 most common extensions
-  js.........................................80095
-  json.......................................10800
-  ts..........................................8897
-  map.........................................3668
-  md..........................................2486
-  yml.........................................1202
-  flow........................................1191
-  png..........................................494
-  npmignore....................................452
-  txt..........................................362
-Total size.................................657.9MB
-Total lines of code.......................14504117
+$ ./password_checker.py password1 123456 -f ~/Desktop/path_to_file.csv --delete --verbose
+Found match for "Gmail" 1444 times!
+Found match for "pas..." 2427158 times!
+Found match for "123..." 24230577 times!
+DEBUG:root:Securely deleting file (3 rounds...)
 ```
 
 ---
@@ -79,6 +89,30 @@ Introduction_To_Linux.pdf
 Linux_Bash_Programming_Cookbook.pdf
 Linuxsys.pdf
 Learn_Linux_In_5_Days.pdf
+```
+
+---
+#### [Oh, Node!](https://github.com/herokunt/python-scripts/blob/main/oh_node.py)
+Curious about how many files does that node_modules folder has in it? How many lines of code? What kind of files are in there? This small utility script will find out for you exactly that!
+
+```
+$ oh_node.py ~/Projects/ -t 10
+oh_node.py - Scan Complete
+--------------------------------------------------
+Total files.................................129514
+  Showing 10 most common extensions
+  js.........................................80095
+  json.......................................10800
+  ts..........................................8897
+  map.........................................3668
+  md..........................................2486
+  yml.........................................1202
+  flow........................................1191
+  png..........................................494
+  npmignore....................................452
+  txt..........................................362
+Total size.................................657.9MB
+Total lines of code.......................14504117
 ```
 
 ---

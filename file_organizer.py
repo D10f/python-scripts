@@ -1,6 +1,9 @@
 #! /usr/bin/python3
 
 '''
+file_organizer.py - Keep your files under control automatically. Run this script and let it decide where to send those files inside the messy Downlods folder.
+                    Trust the defaults or customize away as much as you want to move only those files that you really care about.
+
 usage: file_organizer.py [-h] [-s SRC] [-o extension [extension ...] | -i extension [extension ...]] [-f] [-e regexp] [-m dir=.ext1,.ext2] [--dry-run] [-v]
                          [--version]
 
@@ -56,6 +59,8 @@ import os
 import re
 
 # TODO: Allow using -f to force overwrite existing files, or create copies
+# TODO: Create missing directories when specified as destination source for moved files
+# TODO: Improve dry-run output for clarity
 
 # DEFAULT HOME DIRECTORIES
 
@@ -63,6 +68,7 @@ HOME_DIR      = Path.home()
 DOWNLOAD_DIR  = Path(HOME_DIR, 'Downloads')
 DOCUMENTS_DIR = Path(HOME_DIR, 'Documents')
 PICTURES_DIR  = Path(HOME_DIR, 'Pictures')
+PROJECTS_DIR  = Path(HOME_DIR, 'Projects')
 MUSIC_DIR     = Path(HOME_DIR, 'Music')
 VIDEOS_DIR    = Path(HOME_DIR, 'Videos')
 
@@ -84,6 +90,21 @@ FILE_EXT_ASSOCIATIONS = {
     '.odp',
     '.odg',
     '.epub',
+    '.mobi',
+    '.azw',
+  ]),
+  PROJECTS_DIR: set([
+    '.apk',
+    '.jar',
+    '.cmd',
+    '.exe',
+    '.bin',
+    '.sh',
+    '.bat',
+    '.app',
+    '.appimage',
+    '.deb',
+    '.snap',
   ]),
   PICTURES_DIR: set([
     '.jpg',
@@ -96,15 +117,30 @@ FILE_EXT_ASSOCIATIONS = {
     '.psd',
     '.webp',
     '.avif',
+    '.bmp',
+    '.favicon',
+    '.raw',
   ]),
   MUSIC_DIR: set([
-    '.mov',
-    '.mkv',
+    '.wav',
+    '.wave',
+    '.aif',
     '.mp3',
+    '.mid',
+    '.midi',
+    '.flac',
+    '.omg',
+    '.ogg',
   ]),
   VIDEOS_DIR: set([
+    '.mpeg',
+    '.mpg',
+    '.mov',
+    '.wmv',
     '.mp4',
-    '.wav',
+    '.mkv',
+    '.webm',
+    '.ogv',
   ]),
 }
 
