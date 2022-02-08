@@ -51,6 +51,10 @@ Check script's version
 ./file_organizer.py --version
 '''
 
+# TODO: Allow using -f to force overwrite existing files, or create copies
+# TODO: Create missing directories when specified as destination source for moved files
+# TODO: Improve dry-run output for clarity
+
 from pathlib import Path
 import argparse
 import logging
@@ -58,9 +62,7 @@ import shutil
 import os
 import re
 
-# TODO: Allow using -f to force overwrite existing files, or create copies
-# TODO: Create missing directories when specified as destination source for moved files
-# TODO: Improve dry-run output for clarity
+CURRENT_VERSION = 'v0.0.2'
 
 # DEFAULT HOME DIRECTORIES
 
@@ -144,10 +146,15 @@ FILE_EXT_ASSOCIATIONS = {
   ]),
 }
 
+# INITIALIZE LOGGER INSTANCE
+
+logger = logging.getLogger(__name__)
+
 
 def main():
   args = parse_arguments()
-  
+  setup_logger(args.verbose)
+
   if args.map:
     update_file_associations(args.map)
   
@@ -164,7 +171,7 @@ def main():
 
 
 def move_files(files, force = False, dry = False):
-  'Moves files based on their extension to the associated directory'
+  """Moves files based on their extension to the associated directory"""
 
   for file in files:
     for directory in FILE_EXT_ASSOCIATIONS:
@@ -172,29 +179,29 @@ def move_files(files, force = False, dry = False):
         file_already_exists = is_file_in_dir(file.name, directory)
 
         if file_already_exists and not force:
-          logging.warning(f'Destination path {Path.joinpath(directory, file.name)} already exists. Skipping...')
+          logger.warning(f'Destination path {Path.joinpath(directory, file.name)} already exists. Skipping...')
           continue
 
         if not dry:
           # path-like objects only supported on Python3.9+
           shutil.move(str(file), str(directory))
 
-        logging.info(f'Moving {file} to {directory}')
+        logger.info(f'Moving {file} to {directory}')
         
         if file_already_exists:
-          logging.warning(f'-f flag provided! Overwriting {Path.joinpath(directory, file.name)}')
+          logger.warning(f'-f flag provided! Overwriting {Path.joinpath(directory, file.name)}')
 
         continue
 
 
 def is_file_in_dir(filename, directory):
-  'Checks if the provided filename already exists in the given directory'
+  """Checks if the provided filename already exists in the given directory"""
 
   return filename in [x.name for x in Path.iterdir(directory)]
 
 
 def select_files(src_dir, ignore_extensions = None, only_extensions = None, pattern = None):
-  'Selects the files matching the filter criteria passed as arguments'
+  """Selects the files matching the filter criteria passed as arguments"""
 
   # ignore files without extension (includes directories)
   src_dir_files = [x for x in Path.iterdir(src_dir) if x.suffix]
@@ -217,7 +224,7 @@ def select_files(src_dir, ignore_extensions = None, only_extensions = None, patt
 
 
 def update_file_associations(custom_map):
-  'Updates the default list of file associated to a specific directory'
+  """Updates the default list of file associated to a specific directory"""
 
   for mapping in custom_map:
     [custom_dir_input, file_extension_input] = mapping.split('=')
@@ -238,41 +245,82 @@ def update_file_associations(custom_map):
       FILE_EXT_ASSOCIATIONS[custom_dir_path] = set(file_extensions)
 
 
-def print_arguments(args):
-  'Prints the arugments the script uses to run, if verbosity is specified'
+def setup_logger(verbosity):
+  """Defines the handler and formatter for the module's logger instance."""
 
-  if args.verbose == 0:
-    return
-  elif args.verbose == 1:
-    logging.basicConfig(level=logging.INFO)
+  # Define handler (output to console) based on verbosity provided
+  stdout_handler = logging.StreamHandler()
+  if verbosity == 1:
+    stdout_handler.setLevel(logging.INFO)
+  elif verbosity == 2:
+    stdout_handler.setLevel(logging.DEBUG)
   else:
-    logging.basicConfig(level=logging.DEBUG)
+    stdout_handler.setLevel(logging.WARNING)
 
-  logging.debug(f'Running as user: {os.getenv("USER")}')
-  logging.debug(f'Running with arguments: {args}')
-  logging.info(f'Reading from: {args.src}')
+  # Define formatter for the handler
+  fmt = '%(asctime)s | %(module)s line %(lineno)3d | %(levelname)8s | %(message)s'
+
+  # Custom format class to print using colors. Credit:
+  # https://alexandra-zaharia.github.io/posts/make-your-own-custom-color-formatter-with-python-logging/
+
+  class CustomFormatter(logging.Formatter):
+    """Logging colored formatter, adapted from https://stackoverflow.com/a/56944256/3638629"""
+
+    debug = '\x1b[38;21m'
+    info = '\x1b[38;5;39m'
+    warning = '\x1b[38;5;220m'
+    error = '\x1b[38;5;202m'
+    critical = '\x1b[38;5;160m'
+    reset = '\x1b[0m'
+
+    def __init__(self, fmt):
+      super().__init__()
+      self.fmt = fmt
+      self.FORMATS = {
+        logging.DEBUG: self.debug + self.fmt + self.reset,
+        logging.INFO: self.info + self.fmt + self.reset,
+        logging.WARNING: self.warning + self.fmt + self.reset,
+        logging.ERROR: self.error + self.fmt + self.reset,
+        logging.CRITICAL: self.critical + self.fmt + self.reset
+      }
+
+    def format(self, record):
+      log_fmt = self.FORMATS.get(record.levelno)
+      formatter = logging.Formatter(log_fmt)
+      return formatter.format(record)
+
+  stdout_handler.setFormatter(CustomFormatter(fmt))
+  logger.addHandler(stdout_handler)
+  
+
+def print_arguments(args):
+  """Prints the arugments the script uses to run, if verbosity is specified"""
+
+  logger.debug(f'Running as user: {os.getenv("USER")}')
+  logger.debug(f'Running with arguments: {args}')
+  logger.info(f'Reading from: {args.src}')
   
   if args.ignore:
-    logging.info(f'Ignoring extensions: {args.ignore}')
+    logger.info(f'Ignoring extensions: {args.ignore}')
 
   if args.only:
-    logging.info(f'Running only for extensions: {args.only}')
+    logger.info(f'Running only for extensions: {args.only}')
   
   if args.pattern:
-    logging.info(f'Looking files matching pattern: {args.pattern}')
+    logger.info(f'Looking files matching pattern: {args.pattern}')
 
   if args.map:
-    logging.info(f'Using custom file associations:')
+    logger.info(f'Using custom file associations:')
     [print(Path(x).resolve()) for x in args.map]
 
   if args.force:
-    logging.info(f'Running with force option enabled.')
+    logger.info(f'Running with force option enabled.')
   
   if args.dry:
-    logging.info(f'Running with dry-run option enabled.')
+    logger.warning(f"Running in test mode. Changes won't be saved to disk.")
 
   if args.verbose > 1:
-    logging.debug(f'Using file associations')
+    logger.debug(f'Using file associations')
     for directory in FILE_EXT_ASSOCIATIONS:
       print(directory, end='\n\t')
       print(FILE_EXT_ASSOCIATIONS[directory])
@@ -331,7 +379,7 @@ def parse_arguments():
 
   parser.add_argument('--version',
     action='version',
-    version='%(prog)s v0.0.1'
+    version=f'%(prog)s {CURRENT_VERSION}'
   )
 
   return parser.parse_args()
