@@ -62,7 +62,7 @@ import shutil
 import os
 import re
 
-CURRENT_VERSION = 'v0.0.2'
+CURRENT_VERSION = 'v0.1.0'
 
 # DEFAULT HOME DIRECTORIES
 
@@ -146,10 +146,14 @@ FILE_EXT_ASSOCIATIONS = {
   ]),
 }
 
-# INITIALIZE LOGGER INSTANCE
+# LOGGER OUTPUT COLORS (256-bit)
 
-logger = logging.getLogger(__name__)
-
+DEBUG_LVL = '\x1b[38;5;240m'
+INFO_LVL = '\x1b[38;5;39m'
+WARNING_LVL = '\x1b[38;5;220m'
+ERROR_LVL = '\x1b[38;5;202m'
+CRITICAL_LVL = '\x1b[38;5;160m'
+RESET_COLOR = '\x1b[0m'
 
 def main():
   args = parse_arguments()
@@ -251,47 +255,19 @@ def setup_logger(verbosity):
   # Define handler (output to console) based on verbosity provided
   stdout_handler = logging.StreamHandler()
   if verbosity == 1:
-    stdout_handler.setLevel(logging.INFO)
+    logger.setLevel(logging.INFO)
   elif verbosity == 2:
-    stdout_handler.setLevel(logging.DEBUG)
-  else:
-    stdout_handler.setLevel(logging.WARNING)
+    logger.setLevel(logging.DEBUG)
 
   # Define formatter for the handler
-  fmt = '%(asctime)s | %(module)s line %(lineno)3d | %(levelname)8s | %(message)s'
+  fmt = '%(asctime)s | %(levelname)8s | %(message)s'
 
   # Custom format class to print using colors. Credit:
   # https://alexandra-zaharia.github.io/posts/make-your-own-custom-color-formatter-with-python-logging/
 
-  class CustomFormatter(logging.Formatter):
-    """Logging colored formatter, adapted from https://stackoverflow.com/a/56944256/3638629"""
-
-    debug = '\x1b[38;21m'
-    info = '\x1b[38;5;39m'
-    warning = '\x1b[38;5;220m'
-    error = '\x1b[38;5;202m'
-    critical = '\x1b[38;5;160m'
-    reset = '\x1b[0m'
-
-    def __init__(self, fmt):
-      super().__init__()
-      self.fmt = fmt
-      self.FORMATS = {
-        logging.DEBUG: self.debug + self.fmt + self.reset,
-        logging.INFO: self.info + self.fmt + self.reset,
-        logging.WARNING: self.warning + self.fmt + self.reset,
-        logging.ERROR: self.error + self.fmt + self.reset,
-        logging.CRITICAL: self.critical + self.fmt + self.reset
-      }
-
-    def format(self, record):
-      log_fmt = self.FORMATS.get(record.levelno)
-      formatter = logging.Formatter(log_fmt)
-      return formatter.format(record)
-
   stdout_handler.setFormatter(CustomFormatter(fmt))
   logger.addHandler(stdout_handler)
-  
+
 
 def print_arguments(args):
   """Prints the arugments the script uses to run, if verbosity is specified"""
@@ -319,11 +295,10 @@ def print_arguments(args):
   if args.dry:
     logger.warning(f"Running in test mode. Changes won't be saved to disk.")
 
-  if args.verbose > 1:
-    logger.debug(f'Using file associations')
+  if logger.isEnabledFor(logging.DEBUG):
     for directory in FILE_EXT_ASSOCIATIONS:
-      print(directory, end='\n\t')
-      print(FILE_EXT_ASSOCIATIONS[directory])
+      logger.debug(directory)
+      logger.debug(FILE_EXT_ASSOCIATIONS[directory])
 
 
 def parse_arguments():
@@ -383,6 +358,30 @@ def parse_arguments():
   )
 
   return parser.parse_args()
+
+
+# INITIALIZE LOGGER INSTANCE AND CUSTOM FORMATTER
+
+logger = logging.getLogger(__name__)
+
+class CustomFormatter(logging.Formatter):
+  """Logging colored formatter, adapted from https://stackoverflow.com/a/56944256/3638629"""
+
+  def __init__(self, fmt):
+    super().__init__()
+    self.fmt = fmt
+    self.FORMATS = {
+      logging.DEBUG: DEBUG_LVL + self.fmt + RESET_COLOR,
+      logging.INFO: INFO_LVL + self.fmt + RESET_COLOR,
+      logging.WARNING: WARNING_LVL + self.fmt + RESET_COLOR,
+      logging.ERROR: ERROR_LVL + self.fmt + RESET_COLOR,
+      logging.CRITICAL: CRITICAL_LVL + self.fmt + RESET_COLOR
+    }
+
+  def format(self, record):
+    log_fmt = self.FORMATS.get(record.levelno)
+    formatter = logging.Formatter(log_fmt)
+    return formatter.format(record)
 
 
 if __name__ == '__main__':
