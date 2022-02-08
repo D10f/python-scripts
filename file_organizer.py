@@ -54,6 +54,7 @@ Check script's version
 # TODO: Allow using -f to force overwrite existing files, or create copies
 # TODO: Create missing directories when specified as destination source for moved files
 # TODO: Improve dry-run output for clarity
+# TODO: Support for multiple sources e.g, Desktop and Downloads
 
 from pathlib import Path
 import argparse

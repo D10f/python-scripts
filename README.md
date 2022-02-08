@@ -35,37 +35,40 @@ DEBUG:root:Securely deleting file (3 rounds...)
 
 ---
 #### [File Organizer](https://github.com/herokunt/python-scripts/blob/main/file_organizer.py)
-Automate the boring task of organizing your file system: random downloads from the internet, received in chat groups or recovered from an old drive. This script runs on the Downloads folder by default and simply moves the files around based on the extension. Coupled with a scheduler like `cron` you can create powerful customizations via the command line to suit your needs.
+Automate the boring task of organizing your files into a neat folder structure. This script will look at your files inside the Downloads folder and move them to where they belong based on the file extension. If you have hundreds of files in there this will clear things up in the blink of an eye!.
 
-For best results use in conjunction with the following script in the list to keep your file system well organized, automatically!
+Provide additional options to customize which files you want to move around and where to send them. Run it in test-mode to see first what changes would be make to avoid any mistakes. For best results, run this automatically using a scheduler like `cron` and combine it with the following script in the list.
+
+Examples:
 
 ```bash
-# Move only files with extension mp4 and wav ignore the rest
+# Move only files with extension .mp4 and .wav
 ./file_organizer.py -o mp4 wav
 
-# Do not move files with extensions mp4 wav
+# Move all files except those with extension .mp4 and .wav
 ./file_organizer.py -i mp4 wav
 
-# Move all .epub and .pdf files to ~/Sync/Books (default for those two is ~/Documents)
-./file_organizer.py -m ~/Sync/Books=epub,pdf
+# Move all .epub and .mobi files to ~/Shared/Books (default for .epub and .mobi is ~/Documents)
+./file_organizer.py -m ~/Shared/Books=epub,pdf
 
 # Move files from ~/Desktop (default is to move from ~/Downloads)
 ./file_organizer.py -s ~/Desktop
 
-# Only move files that start with "distr", case sensitive e.g.: Distributed_Systems_With_Node_js.epub
-./file_organizer.py -e '^Distr'
+# Move files with multiple extensions to the Desktop e.g.: Shade of Z - Black.tar.xz, files_backup.tar.gz
+./file_organizer.py -e '(\.tar\.[gx]z)$' -m ~/Desktop=.tar.gz,.tar.xz
 
 # Run in test mode to verify changes before actually writing to disk
 ./file_organizer.py --dry-run
 ```
 
-```
-$ ./password_checker.py password1 123456 -f ~/Desktop/path_to_file.csv --delete --verbose
-Found match for "Gmail" 1444 times!
-Found match for "pas..." 2427158 times!
-Found match for "123..." 24230577 times!
-DEBUG:root:Securely deleting file (3 rounds...)
-```
+Todo:
+- [] Allow using -f to force overwrite existing files, or create copies
+- [] Create missing directories when specified as destination source 
+for moved files.
+- [X] Improve dry-run output for clarity
+- [X] Improve logging verbosity, add colors and clear format.
+- [] Support for multiple sources e.g, Desktop and Downloads
+
 
 ---
 #### [Nama Nama](https://github.com/herokunt/python-scripts/blob/main/nama_nama.py)
