@@ -62,12 +62,12 @@ Examples:
 ```
 
 Todo:
-- [] Allow using -f to force overwrite existing files, or create copies
-- [] Create missing directories when specified as destination source 
+- [ ] Allow using -f to force overwrite existing files, or create copies
+- [ ] Create missing directories when specified as destination source 
 for moved files.
 - [X] Improve dry-run output for clarity
 - [X] Improve logging verbosity, add colors and clear format.
-- [] Support for multiple sources e.g, Desktop and Downloads
+- [ ] Support for multiple sources e.g, Desktop and Downloads
 
 
 ---
