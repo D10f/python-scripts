@@ -63,7 +63,7 @@ import shutil
 import os
 import re
 
-CURRENT_VERSION = 'v0.1.0'
+CURRENT_VERSION = 'v0.1.1'
 
 # DEFAULT HOME DIRECTORIES
 
@@ -263,9 +263,6 @@ def setup_logger(verbosity):
   # Define formatter for the handler
   fmt = '%(asctime)s | %(levelname)8s | %(message)s'
 
-  # Custom format class to print using colors. Credit:
-  # https://alexandra-zaharia.github.io/posts/make-your-own-custom-color-formatter-with-python-logging/
-
   stdout_handler.setFormatter(CustomFormatter(fmt))
   logger.addHandler(stdout_handler)
 
@@ -297,6 +294,7 @@ def print_arguments(args):
     logger.warning(f"Running in test mode. Changes won't be saved to disk.")
 
   if logger.isEnabledFor(logging.DEBUG):
+    logger.debug(f'Running with directory-file associations:')
     for directory in FILE_EXT_ASSOCIATIONS:
       logger.debug(directory)
       logger.debug(FILE_EXT_ASSOCIATIONS[directory])
@@ -362,6 +360,8 @@ def parse_arguments():
 
 
 # INITIALIZE LOGGER INSTANCE AND CUSTOM FORMATTER
+# Custom format class to print using colors. Credit:
+# https://alexandra-zaharia.github.io/posts/make-your-own-custom-color-formatter-with-python-logging/
 
 logger = logging.getLogger(__name__)
 
