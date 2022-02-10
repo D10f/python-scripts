@@ -1,236 +1,320 @@
-# #!/usr/bin/python3
+#!/usr/bin/env python3
 
-# '''
-# nama_nama.py - Organize collections of files by changing their names uniformly.
-# Turn all letters uppercase, lowercase or title-case (first letter of every word
-# uppercase). Add prefixes and sufixes for files, replace characters with your
-# chosen delimiters, etc.
+"""
+usage: nama_nama.py input_dir [-h] [-t | -u | -l] [--prefix PREFIX]
+                    [--suffix SUFFIX] [--separator {-,_, }] [--split] [-e regexp]
+                    [--prune prune] [--dry-run] [-v] [--version]
 
-# USAGE: nama_nama.py DIRECTORY   [title|upper|lower] [separate] [split-at]
-#                                 [prefix] [sufix] [remove] [dry_run] [verbose]
+Rename files in a directory uniformly, choose the pattern
+    between all uppercase, all lowercase or title-case (only first letter of
+    every word uppercase). Set a delimiter between words i.e.: like-this,
+    like_that or 'maybe this' (defaults to space). Set prefix or suffix, ideal
+    for music albums or photo collections e.g.: Iceland-{filename}
 
-# Rename files in a directory uniformly, choose the pattern between all
-# uppercase, all lowercase or title-case (only first letter of every word
-# uppercase). Set a delimiter between words i.e.: like-this, like_that or
-# maybe.this (defaults to space). Set prefix or suffix, ideal for music albums
-# or photo collections e.g.: Iceland-{filename}
+positional arguments:
+  input_dir             The target directory where files should be renamed
 
-# positional arguments:
-#   input_dir             The target directory where files should be renamed
+optional arguments:
+  -h, --help            show this help message and exit
+  -t, --title           Turns the first letter in every word uppercase
+  -u, --upper           Turns every letter uppercase
+  -l, --lower           Turns every letter lowercase
+  --prefix PREFIX       Adds a prefix string to every output filename
+  --suffix SUFFIX       Adds a sufix string to every output filename
+  --separator {-,_, }   Choose how the words in the output filename should be separated by. Defaults to a space
+  --split               Replace non-alphanumeric characters with the value provided to --separator (does not apply on extension)
+  -e regexp, --regexp regexp
+                        Filter results with regular expression, instead of selecting all files in directory
+  --prune prune         Remove any characters from the original filename before renaming it (does not apply on file extension).
+  --dry-run             Runs the script without writing changes to disk
+  -v, --verbose         Produce additional output
+  --version             show program's version number and exit
+"""
 
-# optional arguments:
-#   -h, --help            show this help message and exit
-#   -t, --title           Turns the first letter in every word uppercase
-#   -u, --upper           Turns every letter uppercase
-#   -l, --lower           Turns every letter lowercase
-#   --prefix PREFIX       Adds a prefix character string to every output
-#                         filename
-#   --sufix SUFIX         Adds a sufix character string to every output filename
-#   --separate {-,_,.,,, ,!}
-#                         Choose how the words in the output filename should be
-#                         separated by. Defaults to a space
-#   --split               Splits words in filename, use this to get rid of any
-#                         existing dividers e.g., underscores, that you want to
-#                         get rid of (they will be replaced by the "--separate"
-#                         flag which defaults to a space)
-#   -r REMOVE, --remove REMOVE
-#                         Removes the matching characters if found on the
-#                         filename. Use with care as changes are non-reversible,
-#                         is recommended to run with the --dry-run flag enabled
-#                         to see what the expected output would look like.
-#   -v, --verbose         Prints additional information to terminal output
-#   --dry-run             Processes files in memory and prints results to
-#                         terminal output
-
-# TODO: Option to add numerical sequences as prefixes and sufixes
-# TODO: Option to run this script recursively
-# '''
-
-# import argparse
-# import logging
-# import pathlib
-# import shutil
-# import sys
-# import os
-# import re
-
-# def main():
-#     args = parse_arguments()
-
-#     if args.verbose:
-#         logging.basicConfig(level=logging.DEBUG)
-#         logging.debug(f'Arguments: {args}')
-
-#     if args.case_spec is None:
-#         logging.debug(f'Naming convention missing')
-#         print('You must specify a naming convention e.g., tittle case\nExiting...')
-#         sys.exit()
-
-#     # Get all files excluding directories
-#     logging.debug('Getting files...')
-#     files = get_files(args.input_dir)
-
-#     # Rename files
-#     logging.debug('Processing...')
-#     renamed_files = rename_files(files, args)
-
-#     # If dry run print results from memory and exit program
-#     if args.dry_run:
-#         logging.debug('Entering dry-run mode...')
-#         for original, renamed in renamed_files:
-#             print(f'[DR] Renaming: {original} -> {renamed}')
-#         sys.exit()
-
-#     # Write changes to disk
-#     logging.debug('Writing changes...')
-#     write_files_to_disk(renamed_files, args)
-
-#     logging.debug('End of program')
+from pathlib import Path
+from itertools import zip_longest
+import argparse
+import logging
+import shutil
+import sys
+import os
+import re
 
 
-# def write_files_to_disk(files, args):
-#     '''Renames the files list at the input directory specified'''
-
-#     for original, renamed in files:
-#         # Convert to their absolute path to avoid conflicting issues
-#         o = os.path.join(args.input_dir, original)
-#         r = os.path.join(args.input_dir, renamed)
-#         shutil.move(o, r)
+CURRENT_VERSION = '0.1.0'
+SEPARATOR_CHARS = re.compile(r'[+=\-_.,;:<>()\[\]\s]')
 
 
-# def rename_files(files, args):
-#     '''Renames the files using the case convention provided. Returns a generator
-#     expression that yields a tuple with the original and modified filenames'''
+def main():
+  args = parse_arguments()
+  setup_logger(args.verbose)
+  print_arguments(args)
 
-#     # The following are regular expressions that are created when this function
-#     # is first called. This avoids unnecessarily creating them on every file
-#     # iteration, when they are actually used (a few lines below)
+  entrypoint = Path(args.input_dir).resolve()
 
-#     # Split any dividers before joining the word string
-#     if args.split:
-#         split_at = re.compile(r'[+=\-_.,;:<>()\[\]\s]')
+  files = select_files(entrypoint, args.pattern)
+  
+  renamed_files = rename_files(files, args)
 
-#     # Remove any characters specified
-#     if args.remove:
-#         remove_chars = re.compile(f'{args.remove}')
+  if args.dry:
+    for original, renamed in renamed_files:
+      logger.debug(f'[test mode] {original.name} -> {renamed.name}')
+    sys.exit()
 
-#     for file in files:
-#         filename, ext = os.path.splitext(file)
-
-#         # Replace any split characters with separators
-#         if args.split:
-#             logging.debug('Replacing split regex...')
-#             filename = split_at.sub(args.separate, filename)
-
-#         # Removes any characters matching the provided string
-#         if args.remove:
-#             logging.debug(f'Removing {args.remove} from filename')
-#             filename = remove_chars.sub('', filename)
-
-#         logging.debug(f'Processing: {filename}')
-#         filename = filename.split(args.separate)
-
-#         renamed = []
-#         for word in filename:
-#             # What casing to apply
-#             if args.case_spec == 'title':
-#                 word = word.title()
-#             if args.case_spec == 'upper':
-#                 word = word.upper()
-#             if args.case_spec == 'lower':
-#                 word = word.lower()
-
-#             renamed.append(word)
-
-#         # Apply prefix and sufixes, if any
-#         if args.prefix:
-#             renamed.insert(0, args.prefix)
-#         if args.sufix:
-#             renamed.append(args.sufix)
-
-#         renamed_file = args.separate.join(renamed) + ext
-
-#         yield (file, renamed_file)
+  write_files_to_disk(renamed_files)
 
 
-# def get_files(dir):
-#     '''Matches all files in the provided directory and yields them'''
 
-#     for file in os.listdir(dir):
-#         if os.path.isfile(os.path.join(dir, file)):
-#             yield file
+def write_files_to_disk(files):
+  """Renames the files list at the input directory specified"""
 
-
-# def parse_arguments():
-#     parser = argparse.ArgumentParser(
-#         description='''Rename files in a directory uniformly, choose the pattern
-#         between all uppercase, all lowercase or title-case (only first letter of
-#         every word uppercase). Set a delimiter between words i.e.: like-this,
-#         like_that or maybe.this (defaults to space). Set prefix or suffix, ideal
-#         for music albums or photo collections e.g.: Iceland-{filename}''',
-
-#         usage='''nama_nama.py DIRECTORY [title|upper|lower]
-#                             [separate] [split-at]
-#                             [prefix] [sufix]'''
-#     )
-#     option = parser.add_mutually_exclusive_group()
-
-#     option.add_argument('-t', '--title',
-#         help='Turns the first letter in every word uppercase',
-#         action='store_const',
-#         const='title',
-#         dest='case_spec'
-#     )
-#     option.add_argument('-u', '--upper',
-#         help='Turns every letter uppercase',
-#         action='store_const',
-#         const='upper',
-#         dest='case_spec'
-#     )
-#     option.add_argument('-l', '--lower',
-#         help='Turns every letter lowercase',
-#         action='store_const',
-#         const='lower',
-#         dest='case_spec'
-#     )
-
-#     parser.add_argument('input_dir',
-#         help='The target directory where files should be renamed',
-#         type=pathlib.Path
-#     )
-#     parser.add_argument('--prefix',
-#         help='Adds a prefix character string to every output filename',
-#     )
-#     parser.add_argument('--sufix',
-#         help='Adds a sufix character string to every output filename',
-#     )
-#     parser.add_argument('--separate',
-#         help='''Choose how the words in the output filename should be separated
-#         by. Defaults to a space''',
-#         choices=['-', '_', '.', ',', ' ', '!'],
-#         default=' '
-#     )
-#     parser.add_argument('--split',
-#         help='''Splits words in filename, use this to get rid of any existing
-#         dividers e.g., underscores, that you want to get rid of (they will be
-#         replaced by the "--separate" flag which defaults to a space)''',
-#         action='store_true'
-#     )
-#     parser.add_argument('-r', '--remove',
-#         help='''Removes the matching characters if found on the filename. Use
-#         with care as changes are non-reversible, is recommended to run with the
-#         --dry-run flag enabled to see what the expected output would look like.'''
-#     )
-#     parser.add_argument('-v', '--verbose',
-#         help='Prints additional information to terminal output',
-#         action='store_true'
-#     )
-#     parser.add_argument('--dry-run',
-#         help='Processes files in memory and prints results to terminal output',
-#         action='store_true'
-#     )
-#     return parser.parse_args()
+  for original, renamed in files:
+    shutil.move(original.resolve(), renamed.resolve())
 
 
-# if __name__ == '__main__':
-#     main()
+def rename_files(files, args):
+  """Returns a generator that yields the original and modified filenames"""
+
+  for file in files:
+
+    # Separate filename and extension (accounts for multiple eg.: .tar.gz)
+    filename = file.stem.split('.')[0]
+    ext = ''.join(file.suffixes)
+
+    if args.split:
+      filename = split_filename(filename, args.separator)
+
+    if args.prune:
+      filename = prune_filename(filename, args.prune)
+
+    if args.title:
+      filename = make_pascal_case(filename)
+    
+    if args.upper:
+      filename = filename.upper()
+    
+    if args.lower:
+      filename = filename.lower()
+
+    renamed = Path(args.prefix + filename + ext + args.suffix)
+
+    yield (file, Path.joinpath(args.input_dir, renamed))
+
+
+def make_pascal_case(filename):
+  """Converts a given string into Pascal Case"""
+  
+  # Produce "negative" lists of chars and separators, if any
+  alpha = [x.title() for x in SEPARATOR_CHARS.split(filename)]
+  non_alpha = SEPARATOR_CHARS.findall(filename)
+
+  # Join them back together
+  pascal_tuple = list(zip_longest(alpha, non_alpha, fillvalue=''))
+  return ''.join(''.join(x) for x in [*pascal_tuple])
+
+
+def split_filename(filename, split_with):
+  """Splits filename"""
+  return SEPARATOR_CHARS.sub(split_with, filename)
+
+
+def prune_filename(filename, prune_char):
+  """Removes the specified pattern from the given filename"""
+  # return prune_char.sub('', filename)
+  return filename.replace(prune_char, '')
+
+
+def select_files(dir_path, pattern = None):
+  """Matches all files in the provided directory and yields them"""
+
+  if pattern:
+    regexp = re.compile(pattern)
+
+  for file in Path.iterdir(dir_path):
+
+    # Ignore directories and hidden files
+    if file.is_dir() or file.name.startswith('.'):
+      continue
+
+    if pattern and not regexp.search(file.name):
+      continue
+
+    yield file
+
+
+def setup_logger(verbosity):
+  """Defines the handler and formatter for the module's logger instance."""
+
+  if verbosity == 1:
+    logger.setLevel(logging.INFO)
+  
+  if verbosity > 1:
+    logger.setLevel(logging.DEBUG)
+
+  # Define handler (output to console) based on verbosity provided
+  stdout_handler = logging.StreamHandler()
+
+  # Define formatter for the handler
+  fmt = '[%(name)s] %(asctime)s %(levelname)-8s %(message)s'
+
+  stdout_handler.setFormatter(CustomFormatter(fmt))
+  logger.addHandler(stdout_handler)
+
+
+def print_arguments(args):
+  """Prints the arugments the script uses to run."""
+  
+  logger.debug(f'Running as user {os.getenv("USER")}')
+  logger.debug(f'Running with arguments: {args}')
+  logger.info(f'reading from "{args.input_dir.resolve()}"')
+
+  if args.prefix:
+    logger.info(f'Prefixing files with: "{args.prefix}"')
+
+  if args.suffix:
+    logger.info(f'Suffixing files with: "{args.suffix}"')
+
+  if args.separator:
+    logger.info(f'Separating files with: "{args.separator}"')
+
+  if args.split:
+    logger.info(f'Splitting files with: "{args.split}"')
+
+  if args.title:
+    logger.info('Using case settings: Capitilize first letter')
+
+  if args.upper:
+    logger.info('Using case settings: All uppercase')
+
+  if args.lower:
+    logger.info('Using case settings: All lowercase')
+
+  if args.pattern:
+    logger.info(f'Using pattern matching: {args.pattern}')
+
+  if args.prune:
+    logger.info(f'Deleting characters: {args.prune}')
+
+  if args.dry:
+    logger.warning("Running in test mode. Changes won't be written to disk.")
+
+
+def parse_arguments():
+  parser = argparse.ArgumentParser(
+    description="""Rename files in a directory uniformly, choose the pattern
+    between all uppercase, all lowercase or title-case (only first letter of
+    every word uppercase). Set a delimiter between words i.e.: like-this,
+    like_that or 'maybe this' (defaults to space). Set prefix or suffix, ideal
+    for music albums or photo collections e.g.: Iceland-{filename}""",
+    usage="""nama_nama.py input_dir [-h] [-t | -u | -l] [--prefix PREFIX]
+                  [--suffix SUFFIX] [--separator {-,_, }] [--split] [-e regexp]
+                  [--prune prune] [--dry-run] [-v] [--version]""",
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+  )
+  casing_options = parser.add_mutually_exclusive_group()
+  casing_options.add_argument('-t', '--title',
+    help='Turns the first letter in every word uppercase',
+    action='store_const',
+    const='title',
+    dest='title'
+  )
+  casing_options.add_argument('-u', '--upper',
+    help='Turns every letter uppercase',
+    action='store_const',
+    const='upper',
+    dest='upper'
+  )
+  casing_options.add_argument('-l', '--lower',
+    help='Turns every letter lowercase',
+    action='store_const',
+    const='lower',
+    dest='lower'
+  )
+  parser.add_argument('input_dir',
+    help='The target directory where files should be renamed',
+    type=Path
+  )
+  parser.add_argument('--prefix',
+    help='Adds a prefix string to every output filename',
+    default=''
+  )
+  parser.add_argument('--suffix',
+    help='Adds a sufix string to every output filename',
+    default=''
+  )
+  parser.add_argument('--separator',
+    help="""Choose how the words in the output filename should be separated
+    by. Defaults to a space""",
+    choices=['-', '_', ' '],
+    default=' '
+  )
+  parser.add_argument('--split',
+    help="""Replace non-alphanumeric characters with the value provided
+    to --separator (does not apply on extension)""",
+    action='store_true'
+  )
+  parser.add_argument('-e', '--regexp',
+    help="""Filter results with regular expression, instead of selecting all
+    files in directory""",
+    dest='pattern',
+    metavar='regexp',
+  )
+  parser.add_argument('--prune',
+    help="""Remove any characters from the original filename before renaming
+    it (does not apply on file extension).""",
+    metavar='prune',
+    dest='prune'
+  )
+  parser.add_argument('--dry-run',
+    help='Runs the script without writing changes to disk',
+    action='store_true',
+    dest='dry'
+  )
+  parser.add_argument('-v', '--verbose',
+    help='Produce additional output',
+    action='count',
+    default=0
+  )
+  parser.add_argument('--version',
+    action='version',
+    version=f'%(prog)s {CURRENT_VERSION}'
+  )
+
+  return parser.parse_args()
+
+
+# INITIALIZE LOGGER INSTANCE AND CUSTOM FORMATTER
+# Custom format class to print using colors. Credit:
+# https://alexandra-zaharia.github.io/posts/make-your-own-custom-color-formatter-with-python-logging/
+
+logger = logging.getLogger('nama_nama.py')
+
+class CustomFormatter(logging.Formatter):
+  """Logging colored formatter, adapted from https://stackoverflow.com/a/56944256/3638629"""
+
+  gray    = '\x1b[38;5;240m'
+  blue    = '\x1b[38;5;39m'
+  yellow  = '\x1b[38;5;220m'
+  orange  = '\x1b[38;5;202m'
+  red     = '\x1b[38;5;160m'
+  reset   = '\x1b[0m'
+
+  def __init__(self, fmt):
+    super().__init__()
+    self.fmt = fmt
+    self.FORMATS = {
+      logging.DEBUG: f'{self.gray}{self.fmt}{self.reset}',
+      logging.INFO: f'{self.blue}{self.fmt}{self.reset}',
+      logging.WARNING: f'{self.yellow}{self.fmt}{self.reset}',
+      logging.ERROR: f'{self.orange}{self.fmt}{self.reset}',
+      logging.CRITICAL: f'{self.red}{self.fmt}{self.reset}',
+    }
+
+  def format(self, record):
+    log_fmt = self.FORMATS.get(record.levelno)
+    formatter = logging.Formatter(log_fmt)
+    return formatter.format(record)
+
+
+if __name__ == '__main__':
+  main()
