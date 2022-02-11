@@ -1,13 +1,27 @@
-from dataclasses import dataclass
+#!/usr/bin/env python3
+ 
 from pathlib import Path
 import yaml
 
-@dataclass
-class Language(language_file_path):
+PROJECT_DIR         = Path.cwd()
+LANGUAGES_FILE_PATH = Path.joinpath(PROJECT_DIR, 'vendors.yml')
 
-  self.languages: [str]
+class Language():
 
-  @classmethod()
-  def load_languages(cls, path_to_file):
-    languages_file = Path(language_file_path).resolve()
-    yaml.load(languages_file)
+  languages: []
+
+  @classmethod
+  def load_languages(cls):
+
+    # if self.languages is not None:
+    #   return
+
+    with open(LANGUAGES_FILE_PATH) as f:
+      languages = yaml.load(f, Loader = yaml.FullLoader)
+      print(languages)
+      # print(languages['JavaScript'])
+
+# test = Language()
+
+Language.load_languages()
+# print(Language.languages())

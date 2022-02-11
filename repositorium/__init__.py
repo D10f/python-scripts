@@ -2,7 +2,7 @@
 
 '''
 repositorium.py - Analyze your git reposistory and print statistics such as
-primary languages used, number of files, lines of code, etc.
+primary languages used, total commits, number of files, etc.
 
 CREDIT: 
 https://gist.github.com/ppisarczyk/43962d06686722d26d176fad46879d41
@@ -29,18 +29,7 @@ def main():
   args = parse_arguments()
   start_logger(args.verbose)
   print_arguments(args)
-
-  if args.git_path:
-    get_local_repository(args.git_path, args.branch)
-  # elif args.git_url:
-  #   fetch_remote_repository(args.git_url, args.branch)
-  # elif args.username:
-  #   fetch_user_data(
-  #     args.username,
-  #     from_provider=args.provider,
-  #     omit_repos=args.omit_repos,
-  #     use_repos=args.use_repos
-  #   )
+  get_local_repository(args.git_path, args.branch)
 
 
 def get_local_repository(path_to_repo, branch):
@@ -129,30 +118,22 @@ def select_files(path_to_repo, exclusion_rules = None):
     4. Exclude files with non-programming extensions and binary formats.
   """
 
+  # Exclude files from .gitignore if found
   ignorefiles = use_ignorefile(path_to_repo)
-  
-  if ignorefiles:
-    logger.debug(f'.gitignore file found ({len(ignorefiles)} lines).')
+
+  # Exclude dirs from known vendors, bundlers, package managers, etc.
   
   result = []
 
   for current_dir, dirnames, filenames in os.walk(path_to_repo):
 
-    # TODO: Apply additional filtering rules for both files and dirs, such as:
-    # common vendor names, bundled code, known external dependencies, etc.
-
-    # Prune directories and files listed under ignorefiles
     dirnames[:] = [d for d in dirnames if d not in ignorefiles]
 
-    # Exclude files listed under ignorefiles
     filtered_files = [f for f in filenames if f not in ignorefiles]
 
     result.extend([Path.joinpath(Path(current_dir), Path(f)) for f in filtered_files])
-  
+
   return result
-
-
-
 
 
 def is_git_repository(dir_path):
@@ -164,10 +145,10 @@ def use_ignorefile(path_to_repo):
   """Checks for the presence of a .gitignore file in the specified directory
   and returns it as a list with every entry."""
 
-  gitignore_file = Path.joinpath(path_to_repo, '.gitignore')
-
   # always ignore .git directory
   result = ['.git']
+
+  gitignore_file = Path.joinpath(path_to_repo, '.gitignore')
 
   if not Path.exists(gitignore_file):
     return result
@@ -209,62 +190,22 @@ def print_arguments(args):
   """Prints the arguments used to run the script."""
   
   logger.debug(f'Running with arguments: {args}')
+  logger.info(f'Searching repository at location: {args.git_path.resolve()} ({args.branch})')
 
-  if args.git_path:
-    logger.info(f'Searching repository at location: {args.git_path.resolve()} ({args.branch})')
-  
-  if args.git_url:
-    logger.info(f'Fetching repository url: {args.git_path} ({args.branch})')
-
-  if args.username:
-    logger.info(f'Searching for username {args.username} on {args.provider}')
-
-    if args.omit_repos:
-      logger.info(f'Ignoring repositories from search: {"".join(args.omit_repos)}')
-
-    if args.use_repos:
-      logger.info(f'Searching for reposi repositories from search: {"".join(args.omit_repos)}')
-  
 
 def parse_arguments():
   """Parses command line arguments passed to run the script"""
 
   parser = argparse.ArgumentParser()
   
-  source_options = parser.add_mutually_exclusive_group(required=True)
-  source_options.add_argument('-d', '--directory',
+  parser.add_argument('path',
     help='the git repository path to the source code in the local machine.',
     type=Path,
     dest='git_path',
   )
-  source_options.add_argument('-r', '--repo-url',
-    help='the git repository url to the source code.',
-    dest='git_url',
-  )
-  source_options.add_argument('-u', '--username',
-    help='the username to check all repositores for.',
-    metavar='git_username'
-  )
-  
-  lookup_options = parser.add_mutually_exclusive_group()
-  lookup_options.add_argument('--omit-repos',
-    help='list of git repository names to ignore. Works with username option.',
-    nargs='+'
-  )
-  lookup_options.add_argument('--use-repos',
-    help='list of git repositories names to use, ignoring the rest. Works with username option.',
-    nargs='+'
-  )
-  
   parser.add_argument('-b', '--branch',
     help='the git branch to run this script against inside a repository',
     default='main'
-  )
-  parser.add_argument('-p', '--provider',
-    help='specifies the provider to query. Works alongside username option.',
-    nargs='+',
-    choices=['GitHub', 'GitLab', 'Codeberg'],
-    default=['GitHub']
   )
   parser.add_argument('-v', '--verbose',
     help='Produce extended output',
