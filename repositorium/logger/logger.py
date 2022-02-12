@@ -6,15 +6,18 @@ class Logger:
 
   _verbosity = 0
 
+
   @property
   def verbosity(cls):
     """The root directory of the repository"""
     return cls._entrypoint
   
+
   @verbosity.setter
   def verbosity(cls, verbosity):
     """Adjusts the verbosity output used when creating loggers"""
     _verbosity = verbosity
+
 
   @classmethod
   def create_logger(cls, name):
@@ -31,7 +34,7 @@ class Logger:
       datefmt = '%Y-%m-%d %H:%M'
     elif cls.verbosity > 1:
       logger.setLevel(logging.DEBUG)
-      fmt = "%(asctime)s [ %(levelname)s - %(filename)s ] %(message)s"
+      fmt = "%(asctime)s [ %(levelname)s - %(filename)s, line %(lineno)s ] %(message)s"
 
     stdout_handler.setFormatter(CustomFormatter(fmt, datefmt))
     logger.addHandler(stdout_handler)
@@ -51,6 +54,7 @@ class CustomFormatter(logging.Formatter):
   red = '\x1b[38;5;160m'
   reset = '\x1b[0m'
 
+
   def __init__(self, fmt, datefmt):
     super().__init__()
     self.fmt = fmt
@@ -62,6 +66,7 @@ class CustomFormatter(logging.Formatter):
       logging.ERROR: f'{self.orange}{self.fmt}{self.reset}',
       logging.CRITICAL: f'{self.red}{self.fmt}{self.reset}',
     }
+
 
   def format(self, record):
     log_fmt = self.FORMATS.get(record.levelno)
