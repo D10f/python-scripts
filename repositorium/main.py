@@ -4,19 +4,19 @@
 repositorium.py - Analyze your git reposistory and print statistics such as
 primary languages used, total commits, number of files, etc.
 
-CREDIT: 
+REFERENCES: 
 https://gist.github.com/ppisarczyk/43962d06686722d26d176fad46879d41
-https://github.com/github/linguist/blob/master/lib/linguist/vendor.yml
+https://github.com/github/linguist
 https://github.com/douban/linguist
 '''
 
-import argparse
-import yaml
-import re
-import os
 from pathlib import Path
+from argparse import ArgumentParser
 
 from repository.repository import Repository
+from readers.reader import YAMLReaderStrategy
+from readers.vendors import Vendors
+from readers.languages import Languages
 from logger.logger import Logger
 
 CURRENT_VERSION = '0.0.1'
@@ -28,16 +28,21 @@ LANGUAGE_LIST = Path.joinpath(PROJECT_DIR, 'data', 'languages.yml')
 def main():
   args = parse_arguments()
   Logger.verbosity = args.verbose
-  
+
+  vendors = Vendors(VENDOR_LIST, YAMLReaderStrategy)
+  languages = Languages(LANGUAGE_LIST, YAMLReaderStrategy)
+
   repository = Repository(args.git_path, args.branch)
-  # TODO: FIX RECURSION!
-  repository.get_facts(VENDOR_LIST, LANGUAGE_LIST)
+  repository.gather_facts(
+    vendor_list = vendors.vendor_list,
+    language_list = languages.language_list
+  )
 
 
 def parse_arguments():
   """Parses command line arguments passed to run the script"""
 
-  parser = argparse.ArgumentParser()
+  parser = ArgumentParser()
   
   parser.add_argument('git_path',
     help='the git repository path to the source code in the local machine.',

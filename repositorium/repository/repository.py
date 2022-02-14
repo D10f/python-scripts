@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
-# from itertools import from_iterable
-import itertools
+from itertools import chain
 from os import walk
 import subprocess
 import sys
 
 from logger.logger import Logger
-from readers.reader import YAMLReaderStrategy
-from readers.languages import Languages
-from readers.vendors import Vendors
+from file.file import FileBlob
 
 class Repository:
 
@@ -93,46 +90,56 @@ class Repository:
     self._branch = branch
 
 
-  def get_facts(self, third_pty_vendors, languages):
+  def gather_facts(self, vendor_list = None, language_list = None):
     """Gathers facts about the repository such as number of files, size in Kb,
     percentage usage of programming language and markup files, etc"""
-    vendors = Vendors(third_pty_vendors, YAMLReaderStrategy)
-    languages = Languages(languages, YAMLReaderStrategy)
+    
+    # Exclude files that:
+    # 1. Are found in repository's .gitignore file
+    # 2. Are known locations used by 3rd pty tools, libraries, package managers
+    candidate_files = self.select_files(vendor_list, self.gitignore)
 
-    # 1. Exclude paths found inside repo's .gitignore file
-    # 2. Exclude known locations used by 3rd pty tools and libraries
-    files = self.select_files(vendors.vendor_list, self.gitignore)
+    # Valid files are:
+    # 1. Programming languages
+    # 2. ?
+    # 3. ?
 
-    [print(x) for x in files]
+    # TODO: fix iterable issue wit hlanguage list which is a dictionary
+    valid_files = map(FileBlob, candidate_files, language_list)
 
-  
-  # def calculate_project_languages(bytes_total, bytes_by_extension, threshold = 1):
-  #   """Calculates the 5 most used languages based on the total bytes of file per
-  #   language. Returns a dict of sorted languages and their percentage."""
+    for f in list(valid_files):
+      if f.is_valid:
+        print(f._path)
+      
 
-  #   # Normalize values for extensions that are grouped under the same language.
-  #   count_by_language = {}
 
-  #   # Used to group together languages that have very low percentage values
-  #   other_languages = 0.00
+  def calculate_project_languages(bytes_total, bytes_by_extension, threshold = 1):
+    """Calculates the 5 most used languages based on the total bytes of file per
+    language. Returns a dict of sorted languages and their percentage."""
 
-  #   for key, value in list(bytes_by_extension.items()):
-  #     language = FILE_EXTENSIONS[key]
-  #     count_by_language.setdefault(language, 0)
-  #     count_by_language[language] = count_by_language[language] + value
+    # Normalize values for extensions that are grouped under the same language.
+    count_by_language = {}
 
-  #   # Update data to percentage values
-  #   for key, value in list(count_by_language.items()):
-  #     percent_value = round(value * 100 / bytes_total, 2)
+    # Used to group together languages that have very low percentage values
+    other_languages = 0.00
 
-  #     if percent_value < threshold:
-  #       other_languages = other_languages + percent_value
-  #       count_by_language.setdefault('Other', 0)
-  #       count_by_language['Other'] = count_by_language['Other'] + other_languages
-  #     else:
-  #       count_by_language[key] = round(value * 100 / bytes_total, 2)
+    for key, value in list(bytes_by_extension.items()):
+      language = FILE_EXTENSIONS[key]
+      count_by_language.setdefault(language, 0)
+      count_by_language[language] = count_by_language[language] + value
 
-  #   return count_by_language
+    # Update data to percentage values
+    for key, value in list(count_by_language.items()):
+      percent_value = round(value * 100 / bytes_total, 2)
+
+      if percent_value < threshold:
+        other_languages = other_languages + percent_value
+        count_by_language.setdefault('Other', 0)
+        count_by_language['Other'] = count_by_language['Other'] + other_languages
+      else:
+        count_by_language[key] = round(value * 100 / bytes_total, 2)
+
+    return count_by_language
   
   
   def select_files(self, *ignore_list):
@@ -140,10 +147,10 @@ class Repository:
     
     for current_dir, dirnames, filenames in walk(self.entrypoint):
 
-      dirnames[:] = [d for d in dirnames if d not in itertools.chain.from_iterable(ignore_list)]
+      dirnames[:] = [d for d in dirnames if d not in chain.from_iterable(ignore_list)]
 
       for f in filenames:
-        if f in itertools.chain.from_iterable(ignore_list):
+        if f in chain.from_iterable(ignore_list):
           continue
         yield Path.joinpath(Path(current_dir), f)
 
