@@ -12,31 +12,24 @@ https://github.com/douban/linguist
 
 from pathlib import Path
 from argparse import ArgumentParser
+from itertools import chain
+import re
 
-from repository.repository import Repository
-from readers.reader import YAMLReaderStrategy
-from readers.vendors import Vendors
-from readers.languages import Languages
-from logger.logger import Logger
-
-CURRENT_VERSION = '0.0.1'
-
-PROJECT_DIR = Path(__file__).resolve().parent
-VENDOR_LIST = Path.joinpath(PROJECT_DIR, 'data', 'vendors.yml')
-LANGUAGE_LIST = Path.joinpath(PROJECT_DIR, 'data', 'languages.yml')
+from readers import YAMLReaderStrategy, FileReader
+from repository import Repository
+from logger import Logger
+import constants
 
 def main():
   args = parse_arguments()
   Logger.verbosity = args.verbose
 
-  vendors = Vendors(VENDOR_LIST, YAMLReaderStrategy)
-  languages = Languages(LANGUAGE_LIST, YAMLReaderStrategy)
+  vendor_list = FileReader.read(constants.VENDOR_LIST, YAMLReaderStrategy)
+  docs_list = FileReader.read(constants.DOCS_LIST, YAMLReaderStrategy)
+  exclude_list = [re.compile(f) for f in chain(vendor_list, docs_list)]
 
-  repository = Repository(args.git_path, args.branch)
-  repository.gather_facts(
-    vendor_list = vendors.vendor_list,
-    language_list = languages.language_list
-  )
+  repository = Repository(args.git_path, args.branch, exclude_list)
+  repository.gather_facts()
 
 
 def parse_arguments():
@@ -59,7 +52,7 @@ def parse_arguments():
   )
   parser.add_argument('--version',
     action='version',
-    version=f'Repositorium.py v{CURRENT_VERSION}'
+    version=f'Repositorium.py v{constants.CURRENT_VERSION}'
   )
 
   return parser.parse_args()

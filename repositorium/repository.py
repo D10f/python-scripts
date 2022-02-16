@@ -2,19 +2,22 @@
 
 from pathlib import Path
 from itertools import chain
-from os import walk
+from re import compile
+import mimetypes
+import os
 import subprocess
 import sys
 
-from logger.logger import Logger
-from file.file import FileBlob
+from logger import Logger
+from file import File
 
 class Repository:
 
-  def __init__(self, git_path, branch):
+  def __init__(self, git_path, branch, *exclude_lists):
     self._entrypoint = None
     self._branch = None
     self._gitignore = None
+    self._exclude_lists = exclude_lists
     self.logger = Logger.create_logger(__name__)
     self.git_root_dir(git_path.resolve(), branch = branch)
 
@@ -90,62 +93,57 @@ class Repository:
     self._branch = branch
 
 
-  def gather_facts(self, vendor_list = None, language_list = None):
+  def gather_facts(self):
     """Gathers facts about the repository such as number of files, size in Kb,
     percentage usage of programming language and markup files, etc"""
     
-    # Exclude files that:
-    # 1. Are found in repository's .gitignore file
-    # 2. Are known locations used by 3rd pty tools, libraries, package managers
-    candidate_files = self.select_files(vendor_list, self.gitignore)
-
-    # Valid files are:
-    # 1. Programming languages
-    # 2. ?
-    # 3. ?
-
-    # TODO: fix iterable issue wit hlanguage list which is a dictionary
-    valid_files = map(FileBlob, candidate_files, language_list)
-
-    for f in list(valid_files):
-      if f.is_valid:
-        print(f._path)
-      
+    candidate_files = (File(f) for f in self.select_files(self._exclude_lists, self.gitignore))
+    # valid_files = (f for f in candidate_files if f.type in ['programming', 'data'])
+    
+    for f in candidate_files:
+      if f.type in ['programming', 'data']:
+        print(f'Name: {f.name}')
+        print(f'Size: {f.size}')
+        print(f'Language: {f.language}')
+        print(f'Extension: {f.extension}')
+        print(f'Type: {f.type}')
+        print(f'Extension: {f.color}')
+        print('---------')
 
 
-  def calculate_project_languages(bytes_total, bytes_by_extension, threshold = 1):
-    """Calculates the 5 most used languages based on the total bytes of file per
-    language. Returns a dict of sorted languages and their percentage."""
+  # def calculate_project_languages(bytes_total, bytes_by_extension, threshold = 1):
+  #   """Calculates the 5 most used languages based on the total bytes of file per
+  #   language. Returns a dict of sorted languages and their percentage."""
 
-    # Normalize values for extensions that are grouped under the same language.
-    count_by_language = {}
+  #   # Normalize values for extensions that are grouped under the same language.
+  #   count_by_language = {}
 
-    # Used to group together languages that have very low percentage values
-    other_languages = 0.00
+  #   # Used to group together languages that have very low percentage values
+  #   other_languages = 0.00
 
-    for key, value in list(bytes_by_extension.items()):
-      language = FILE_EXTENSIONS[key]
-      count_by_language.setdefault(language, 0)
-      count_by_language[language] = count_by_language[language] + value
+  #   for key, value in list(bytes_by_extension.items()):
+  #     language = FILE_EXTENSIONS[key]
+  #     count_by_language.setdefault(language, 0)
+  #     count_by_language[language] = count_by_language[language] + value
 
-    # Update data to percentage values
-    for key, value in list(count_by_language.items()):
-      percent_value = round(value * 100 / bytes_total, 2)
+  #   # Update data to percentage values
+  #   for key, value in list(count_by_language.items()):
+  #     percent_value = round(value * 100 / bytes_total, 2)
 
-      if percent_value < threshold:
-        other_languages = other_languages + percent_value
-        count_by_language.setdefault('Other', 0)
-        count_by_language['Other'] = count_by_language['Other'] + other_languages
-      else:
-        count_by_language[key] = round(value * 100 / bytes_total, 2)
+  #     if percent_value < threshold:
+  #       other_languages = other_languages + percent_value
+  #       count_by_language.setdefault('Other', 0)
+  #       count_by_language['Other'] = count_by_language['Other'] + other_languages
+  #     else:
+  #       count_by_language[key] = round(value * 100 / bytes_total, 2)
 
-    return count_by_language
+  #   return count_by_language
   
   
   def select_files(self, *ignore_list):
     """Returns a list of files not included in the ignore_list provided."""
-    
-    for current_dir, dirnames, filenames in walk(self.entrypoint):
+
+    for current_dir, dirnames, filenames in os.walk(self.entrypoint):
 
       dirnames[:] = [d for d in dirnames if d not in chain.from_iterable(ignore_list)]
 

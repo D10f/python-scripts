@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from re import compile
 import yaml
 import json
 
@@ -13,13 +14,10 @@ class FileReaderStrategy(ABC):
 
 
 class YAMLReaderStrategy(FileReaderStrategy):
-
-  loader = yaml.FullLoader
-
   @classmethod
-  def load(cls, path_to_file):
+  def load(cls, path_to_file, loader = yaml.FullLoader):
     with open(path_to_file) as f:
-      return yaml.load(f, Loader = cls.loader)
+      return yaml.load(f, Loader = loader)
 
 
 class JSONReaderStrategy(FileReaderStrategy):
@@ -27,3 +25,16 @@ class JSONReaderStrategy(FileReaderStrategy):
   def load(cls, path_to_file):
     with open(path_to_file) as f:
       return json.loads(f)
+
+
+class FileReader:
+
+  """Reads a file in the format specified by the strategy"""
+
+  _read_files = {}
+
+  @classmethod
+  def read(cls, path_to_file, reader_strategy):
+    if cls._read_files.get(path_to_file.name) is None:
+      cls._read_files[path_to_file.name] = reader_strategy.load(path_to_file)
+    return cls._read_files.get(path_to_file.name)
