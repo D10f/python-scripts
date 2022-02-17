@@ -2,8 +2,6 @@
 
 from pathlib import Path
 from itertools import chain
-from re import compile
-import mimetypes
 import os
 import subprocess
 import sys
@@ -17,6 +15,7 @@ class Repository:
     self._entrypoint = None
     self._branch = None
     self._gitignore = None
+    self._lang_size = {}
     self._exclude_lists = exclude_lists
     self.logger = Logger.create_logger(__name__)
     self.git_root_dir(git_path.resolve(), branch = branch)
@@ -57,16 +56,11 @@ class Repository:
     self._gitignore = new_list
 
 
-  # @property
-  # def size(self):
-  #   return self._size
-
+  @property
+  def size(self):
+    return sum(self.language_sizes.values())
   
-  # @size.setter
-  # def size(self, new_size):
-  #   self._size = new_size
-
-
+  
   def git_root_dir(self, git_path, branch = None):
     """Verifies and changes directories to the root of the git repo"""
 
@@ -98,48 +92,38 @@ class Repository:
     percentage usage of programming language and markup files, etc"""
     
     candidate_files = (File(f) for f in self.select_files(self._exclude_lists, self.gitignore))
-    # valid_files = (f for f in candidate_files if f.type in ['programming', 'data'])
+    valid_files = (f for f in candidate_files if (f.type is not None and f.extension != '.json'))
+    # valid_files = []
+
+    # for f in candidate_files:
+      # print(f.name, f.extension, f.size)
+      # valid_files.append(f)
+
     
-    for f in candidate_files:
-      if f.type in ['programming', 'data']:
-        print(f'Name: {f.name}')
-        print(f'Size: {f.size}')
-        print(f'Language: {f.language}')
-        print(f'Extension: {f.extension}')
-        print(f'Type: {f.type}')
-        print(f'Extension: {f.color}')
-        print('---------')
+    return self.get_language_usage(valid_files)
+    
 
+  def get_language_usage(self, files):
+    """Returns a list of tuples sorted by the highest language used baesd on
+    byte size"""
 
-  # def calculate_project_languages(bytes_total, bytes_by_extension, threshold = 1):
-  #   """Calculates the 5 most used languages based on the total bytes of file per
-  #   language. Returns a dict of sorted languages and their percentage."""
+    self.language_sizes = self.calculate_language_sizes(files)
+    total_size = self.size
 
-  #   # Normalize values for extensions that are grouped under the same language.
-  #   count_by_language = {}
-
-  #   # Used to group together languages that have very low percentage values
-  #   other_languages = 0.00
-
-  #   for key, value in list(bytes_by_extension.items()):
-  #     language = FILE_EXTENSIONS[key]
-  #     count_by_language.setdefault(language, 0)
-  #     count_by_language[language] = count_by_language[language] + value
-
-  #   # Update data to percentage values
-  #   for key, value in list(count_by_language.items()):
-  #     percent_value = round(value * 100 / bytes_total, 2)
-
-  #     if percent_value < threshold:
-  #       other_languages = other_languages + percent_value
-  #       count_by_language.setdefault('Other', 0)
-  #       count_by_language['Other'] = count_by_language['Other'] + other_languages
-  #     else:
-  #       count_by_language[key] = round(value * 100 / bytes_total, 2)
-
-  #   return count_by_language
+    for key, value in self.language_sizes.items():
+      percentage = round(value * 100 / total_size, 2)
+      yield (key, percentage)
+    
   
-  
+  def calculate_language_sizes(self, files):
+    """Increases repository's byte counter by file.size"""
+    results = {}
+    for f in files:
+      results.setdefault(f.language, 0)
+      results[f.language] += f.size
+    return results
+
+
   def select_files(self, *ignore_list):
     """Returns a list of files not included in the ignore_list provided."""
 

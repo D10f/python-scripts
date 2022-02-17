@@ -29,7 +29,11 @@ def main():
   exclude_list = [re.compile(f) for f in chain(vendor_list, docs_list)]
 
   repository = Repository(args.git_path, args.branch, exclude_list)
-  repository.gather_facts()
+  language_usage = repository.gather_facts()
+  
+  for res in language_usage:
+    lang, perc = res
+    print(lang, perc)
 
 
 def parse_arguments():

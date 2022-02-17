@@ -1,5 +1,4 @@
 from pathlib import Path
-import mimetypes
 from language import Language
 
 class File:
