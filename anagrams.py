@@ -4,6 +4,8 @@
 anagrams.py - Given a word, returns a list of words of anagrams for it.
 """
 
+from collections import Counter
+
 EN_DICITONARY = 'ciphers/utils/en_dictionary.txt'
 
 def main():
@@ -17,17 +19,14 @@ def main():
     print('Anagrams found:', *anagram_list, sep='\n')
 
 
-def find_anagrams(list_of_words, word):
-  anagrams = []
-  target = sorted(word.lower())
-  [anagrams.append(w) for w in list_of_words if sorted(w.lower()) == target]
-  return anagrams
+def find_anagrams(list_of_words, target):
+  return [w for w in list_of_words if Counter(w.lower()) == Counter(target)]
 
 
 def take_user_input(prompt_text):
   res = input(prompt_text)
-  while len(res.strip().split()) != 1:
-    print('You must type in a single word')
+  while len(res) == 0:
+    print('You must type at least one word')
     res = input(prompt_text)
   return res
 
