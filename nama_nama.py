@@ -42,7 +42,7 @@ import re
 
 
 CURRENT_VERSION = '0.1.0'
-SEPARATOR_CHARS = re.compile(r'[+=\-_.,;:<>()\[\]\s]')
+SEPARATOR_CHARS = re.compile(r'[\+=\-_\.,;:<>()\[\]\s]')
 
 
 def main():
