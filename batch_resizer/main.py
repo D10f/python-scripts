@@ -7,27 +7,28 @@ Resize and transform images into different image file formats.
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor
 import argparse
-import logging
 import pathlib
 import sys
 import re
+
+from logger import Logger
 
 CURRENT_VERSION = '1.0.0'
 VALID_FORMATS = ['.jpg', '.jpeg', '.png', '.webp']
 ALPHA_CHANNEL_UNSUPPORTED = ['.jpg', '.jpeg']
 FILE_NOT_FOUND_ERR_CODE = 130
 
+log = Logger(__name__).logger
+
 # TODO: Validate files based on mime type rather than file extension
-# TODO: Verbosity and console output with logging
-# TODO: Implement design patterns (strategy?) for additional options per extension
+# TODO: Implement design patterns (strategy?) for additional options
+# TODO: Custom help prompt
 
 def main():
     args = parse_arguments()
-    print(args.usage)
-    return
 
     if args.verbose:
-        pass
+        log.set_verbosity(args.verbose)
 
     if not args.output.exists():
         create_dir(args.output, parents=args.parents)
@@ -35,7 +36,7 @@ def main():
     image_files = select_images(args.input)
 
     if not image_files:
-        print('No files found, exiting...')
+        log.error('No files found, exiting...')
         sys.exit(FILE_NOT_FOUND_ERR_CODE)
 
     with ThreadPoolExecutor() as executor:
@@ -69,29 +70,48 @@ def create_dir(target_dir, parents=False):
     try:
         target_dir.mkdir(parents=parents)
     except FileNotFoundError:
-        print('Could not find missing directories, try running with -p flag.')
+        log.error('Could not find missing directories, try running with -p flag.')
         sys.exit(FILE_NOT_FOUND_ERR_CODE)
 
 
-def get_filepath(filename, output_dir, matches=0):
+def rename_image(img_path, format, output_dir):
     '''
     Returns a path-like object of the input filename. Verifies if that filename
     already exists in output directory, and appends a suffix to avoid accidental
-    data loss.
+    data loss. Recursive call, handle with care :)
     '''
-    
-    result = pathlib.Path(output_dir, filename)
 
-    if result in output_dir.iterdir():
-        name, ext = filename.split('.')
+    filename = pathlib.Path(output_dir, img_path.stem + format.lower())
 
-        if matches == 0:
-            name += '_copy1'
+    if filename in output_dir.iterdir():
+        if '_copy' not in filename.stem:
+            new_filename = filename.stem + '_copy1'
+        else:
+            _, copy_num = filename.stem.split('_copy')
+            old_version = f'_copy{copy_num}'
+            new_version = f'_copy{int(copy_num) + 1}'
+            new_filename = filename.stem.replace(old_version, new_version)
 
-        filename = name.replace(f'_copy{matches - 1}', f'_copy{matches}') + f'.{ext}'
-        result = get_filepath(filename, output_dir, matches=matches+1)
+        return rename_image(pathlib.Path(new_filename), format, output_dir)
 
-    return result
+    return filename
+
+
+
+def resize_image(img, new_width, new_height):
+    '''
+    Resizes the image to the dimensions provided, preserving aspect-ratio.
+    '''
+    w = new_width or img.width
+    h = new_height or img.height
+    enlarged = w > img.width or h > img.height
+
+    img.thumbnail((w, h))
+
+    if enlarged:
+        log.warning(f'New size ({img.width}x{img.height}) is larger than original ({img.size})')
+    else:
+        log.debug(f'Resized to dimensions: {img.width}x{img.height}')
 
 
 def process_image(img_path, formats=None, width=None, height=None, dest=None):
@@ -100,37 +120,35 @@ def process_image(img_path, formats=None, width=None, height=None, dest=None):
     output_formats = formats or [img_path.suffix.lower()]
 
     with Image.open(img_path) as img:
-        # determine output dimensions
-        w = width or img.width
-        h = height or img.height
 
-        # resize image object (preserving aspect-ratio)
-        img.thumbnail((w, h))
+        # If custom dimensions were provided, resize image object
+        if width or height:
+            resize_image(img, width, height)
 
         # Output one file per format
         for f in output_formats:
-            filename = img_path.stem
 
-            # If img was resized, append new dimensions to output filename
+            # If img is being resized, append new dimensions to output filename
             if width or height:
-                filename += f'_{img.width}-{img.height}'
-
-            filename += f.lower()
+                dimensions = f'_{img.width}-{img.height}'
+                img_path = pathlib.Path(img_path.stem + dimensions)
 
             # avoid overwrite by checking for duplicate filenames
-            output_file = get_filepath(filename, dest)
+            output_file = rename_image(img_path, f, dest)
 
             # Remove alpha channel when converting to formats that don't support it
             if f in ALPHA_CHANNEL_UNSUPPORTED:
+                log.debug(f'Removing alpha channel from {img_path}')
                 img = img.convert('RGB')
 
             # save image
-            print(output_file)
+            log.info(f'Saving file as: {output_file.resolve()}')
             img.save(output_file)
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(add_help=False)
+
     parser.add_argument('input',
         help='Path to the image file(s) to process',
         nargs='+',
@@ -160,7 +178,7 @@ def parse_arguments():
     parser.add_argument('-f', '--formats',
         help='Transform images to the specified format(s)',
         nargs='+',
-        choices=['.jpg', '.jpeg', '.png', '.webp']
+        choices=VALID_FORMATS
     )
     parser.add_argument('-v', '--verbose',
         help='Produces additional output as the program runs',
@@ -171,6 +189,7 @@ def parse_arguments():
         action='version',
         version=f'%(prog)s v{CURRENT_VERSION}'
     )
+
     return parser.parse_args()
 
 
