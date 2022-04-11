@@ -12,6 +12,7 @@ import sys
 import re
 
 from logger import Logger
+from help import print_help
 
 CURRENT_VERSION = '1.0.0'
 VALID_FORMATS = ['.jpg', '.jpeg', '.png', '.webp']
@@ -26,6 +27,9 @@ log = Logger(__name__).logger
 
 def main():
     args = parse_arguments()
+
+    if args.help:
+        return print_help()
 
     if args.verbose:
         log.set_verbosity(args.verbose)
@@ -128,7 +132,7 @@ def process_image(img_path, formats=None, width=None, height=None, dest=None):
         # Output one file per format
         for f in output_formats:
 
-            # If img is being resized, append new dimensions to output filename
+            # If img was resized, append new dimensions to output filename
             if width or height:
                 dimensions = f'_{img.width}-{img.height}'
                 img_path = pathlib.Path(img_path.stem + dimensions)
@@ -188,6 +192,9 @@ def parse_arguments():
     parser.add_argument('--version',
         action='version',
         version=f'%(prog)s v{CURRENT_VERSION}'
+    )
+    parser.add_argument('--help',
+        action='store_true',
     )
 
     return parser.parse_args()
