@@ -162,7 +162,7 @@ def main():
 
   if args.map:
     update_file_associations(args.map)
-  
+
   target_files = select_files(
     args.src,
     ignore_extensions = args.ignore,
@@ -192,7 +192,7 @@ def move_files(files, force = False, dry = False):
           shutil.move(str(file), str(directory))
 
         logger.info(f'Moving {file} to {directory}')
-        
+
         if file_already_exists:
           logger.warning(f'-f flag provided! Overwriting {Path.joinpath(directory, file.name)}')
 
@@ -211,7 +211,7 @@ def select_files(src_dir, ignore_extensions = None, only_extensions = None, patt
   # ignore files without extension (includes directories)
   src_dir_files = [x for x in Path.iterdir(src_dir) if x.suffix]
 
-  # Pre-prend extension list with a dot if it was not provided
+  # Prepend extension list with a dot if it was not provided
   if only_extensions:
     ext_filters = [f'.{ext}' if not ext.startswith('.') else ext for ext in only_extensions]
     src_dir_files = [x for x in src_dir_files if x.suffix in ext_filters]
@@ -233,7 +233,7 @@ def update_file_associations(custom_map):
 
   for mapping in custom_map:
     [custom_dir_input, file_extension_input] = mapping.split('=')
-    
+
     custom_dir_path = Path(custom_dir_input).resolve()
 
     # Prefix them with a dot if it was not provided as arguments
@@ -242,7 +242,7 @@ def update_file_associations(custom_map):
     # Remove extensions from existing sets
     for directory in FILE_EXT_ASSOCIATIONS:
       FILE_EXT_ASSOCIATIONS[directory].difference_update(file_extensions)
-    
+
     # Create or update set with the extensions as specified
     if custom_dir_path in FILE_EXT_ASSOCIATIONS:
       FILE_EXT_ASSOCIATIONS[custom_dir_path].update(file_extensions)
@@ -273,13 +273,13 @@ def print_arguments(args):
   logger.debug(f'Running as user: {os.getenv("USER")}')
   logger.debug(f'Running with arguments: {args}')
   logger.info(f'Reading from: {args.src}')
-  
+
   if args.ignore:
     logger.info(f'Ignoring extensions: {args.ignore}')
 
   if args.only:
     logger.info(f'Running only for extensions: {args.only}')
-  
+
   if args.pattern:
     logger.info(f'Looking files matching pattern: {args.pattern}')
 
@@ -289,7 +289,7 @@ def print_arguments(args):
 
   if args.force:
     logger.info(f'Running with force option enabled.')
-  
+
   if args.dry:
     logger.warning(f"Running in test mode. Changes won't be saved to disk.")
 
@@ -325,7 +325,7 @@ def parse_arguments():
     help='Overwrites existing files in target directory',
     action='store_true'
   )
-  
+
   parser.add_argument('-e', '--regexp',
     help='Uses regular expression matching to filter down results.',
     dest='pattern',
