@@ -23,6 +23,7 @@ optional arguments:
   --suffix SUFFIX       Adds a sufix string to every output filename
   --separator {-,_, }   Choose how the words in the output filename should be separated by. Defaults to a space
   --split               Replace non-alphanumeric characters with the value provided to --separator (does not apply on extension)
+  -r, --recursive       Recursively runs this script on all directories found.
   -e regexp, --regexp regexp
                         Filter results with regular expression, instead of selecting all files in directory
   --prune prune         Remove any characters from the original filename before renaming it (does not apply on file extension).
@@ -41,19 +42,19 @@ import os
 import re
 
 
-CURRENT_VERSION = '0.1.0'
-SEPARATOR_CHARS = re.compile(r'[\+=\-_\.,;:<>()\[\]\s]')
+CURRENT_VERSION = '0.1.1'
+SEPARATOR_CHARS = re.compile(r'[\+=\-_\.,;:<>\s\']+')
 
 
 def main():
   args = parse_arguments()
-  setup_logger(args.verbose)
+  setup_logger(args)
   print_arguments(args)
 
   entrypoint = Path(args.input_dir).resolve()
 
-  files = select_files(entrypoint, args.pattern)
-  
+  files = select_files(entrypoint, args.recursive, args.pattern)
+
   renamed_files = rename_files(files, args)
 
   if args.dry:
@@ -89,21 +90,21 @@ def rename_files(files, args):
 
     if args.title:
       filename = make_pascal_case(filename)
-    
+
     if args.upper:
       filename = filename.upper()
-    
+
     if args.lower:
       filename = filename.lower()
 
     renamed = Path(args.prefix + filename + ext + args.suffix)
 
-    yield (file, Path.joinpath(args.input_dir, renamed))
+    yield (file, Path.joinpath(file.parent, renamed))
 
 
 def make_pascal_case(filename):
   """Converts a given string into Pascal Case"""
-  
+
   # Produce "negative" lists of chars and separators, if any
   alpha = [x.title() for x in SEPARATOR_CHARS.split(filename)]
   non_alpha = SEPARATOR_CHARS.findall(filename)
@@ -124,7 +125,7 @@ def prune_filename(filename, prune_char):
   return filename.replace(prune_char, '')
 
 
-def select_files(dir_path, pattern = None):
+def select_files(dir_path, recursive = False, pattern = None):
   """Matches all files in the provided directory and yields them"""
 
   if pattern:
@@ -132,8 +133,14 @@ def select_files(dir_path, pattern = None):
 
   for file in Path.iterdir(dir_path):
 
+    if file.name.startswith('.'):
+      continue
+
     # Ignore directories and hidden files
-    if file.is_dir() or file.name.startswith('.'):
+    if file.is_dir():
+      if recursive:
+        for _file in select_files(file.resolve(), recursive, pattern):
+          yield _file
       continue
 
     if pattern and not regexp.search(file.name):
@@ -142,12 +149,18 @@ def select_files(dir_path, pattern = None):
     yield file
 
 
-def setup_logger(verbosity):
+
+def setup_logger(args):
   """Defines the handler and formatter for the module's logger instance."""
+
+  verbosity = args.verbose
+
+  if args.dry:
+    verbosity = max(2, verbosity)
 
   if verbosity == 1:
     logger.setLevel(logging.INFO)
-  
+
   if verbosity > 1:
     logger.setLevel(logging.DEBUG)
 
@@ -163,7 +176,7 @@ def setup_logger(verbosity):
 
 def print_arguments(args):
   """Prints the arugments the script uses to run."""
-  
+
   logger.debug(f'Running as user {os.getenv("USER")}')
   logger.debug(f'Running with arguments: {args}')
   logger.info(f'reading from "{args.input_dir.resolve()}"')
@@ -251,6 +264,10 @@ def parse_arguments():
   parser.add_argument('--split',
     help="""Replace non-alphanumeric characters with the value provided
     to --separator (does not apply on extension)""",
+    action='store_true'
+  )
+  parser.add_argument('-r', '--recursive',
+    help="Recursively runs this script on all directories found.",
     action='store_true'
   )
   parser.add_argument('-e', '--regexp',
