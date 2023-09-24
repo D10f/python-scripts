@@ -42,8 +42,8 @@ import os
 import re
 
 
-CURRENT_VERSION = '0.1.1'
-SEPARATOR_CHARS = re.compile(r'[\+=\-_\.,;:<>\s\']+')
+CURRENT_VERSION = '0.1.2'
+SEPARATOR_CHARS = re.compile(r'[\+=\-_\.,;:&<>\s\']+')
 
 
 def main():
