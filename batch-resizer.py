@@ -18,15 +18,15 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -v, --verbose         Writes output to the terminal as the program runs
-  -o [OUTPUT], --output [OUTPUT]
+  -o, --output [OUTPUT]
                         Directory where processed images will be saved to
-  -r WIDTH HEIGHT, --resize WIDTH HEIGHT
+  -r, --resize WIDTH HEIGHT
                         Pixel width and height of the output image (preserves
                         aspect-ratio)
-  -f {webp,jpeg,jpg,png} [{webp,jpeg,jpg,png} ...], --format {webp,jpeg,jpg,png} [{webp,jpeg,jpg,png} ...]
+  -f, --format {webp,jpeg,jpg,png} [{webp,jpeg,jpg,png} ...]
                         Convert processed file to the selected image format
   -z, --zip-archive     Store processed images as .zip archive (uncompressed)
-  -t [ARCHIVE], --tar-archive [ARCHIVE]
+  -t, --tar-archive [ARCHIVE]
                         Store processed images as .tar.gz archive (compressed)
 """
 
