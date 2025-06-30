@@ -5,13 +5,13 @@ Checks passwords against the "Have I Been Pwned?" (HIBP) database to find out if
 in any data breaches.
 """
 
-
 import argparse
 import getpass
 import hashlib
 import pathlib
 import subprocess
 import sys
+import time
 import xml.etree.ElementTree as ET
 
 import requests
@@ -28,17 +28,27 @@ def main():
     """
     args = parse_arguments()
 
-    if args.keepass_database:
-        parse_kdbx(args.keepass_database, args.keepass_password_file)
+    session = requests.Session()
+    session.headers.update(
+        {"user-agent": __name__, "Add-Padding": str(args.add_padding)}
+    )
 
-    # session = requests.Session()
-    # session.headers.update(
-    #     {"user-agent": __name__, "Add-Padding": str(args.add_padding)}
-    # )
-    #
+    if args.keepass_database:
+        account_tuple = parse_kdbx(args.keepass_database, args.keepass_password_file)
+
+        for account, password in account_tuple:
+            head, tail = password[:5], password[5:]
+            res = send_request(BASE_URL + head, session, args.request_timeout)
+            hashes = (line.split(":") for line in res.splitlines())
+            for hash_tail, count in hashes:
+                if int(count) > 0 and hash_tail == tail:
+                    print(f'Found {count} matches for "{account}"')
+            time.sleep(args.request_delay)
+
     # for password in args.passwords:
-    #     hash_head, hash_tail = hash_password(password)
-    #     res = send_request(BASE_URL + hash_head, session)
+    #     password_digest = sha1sum(password)
+    #     head, tail = password_digest[:5], password_digest[5:]
+    #     res = send_request(BASE_URL + head, session)
     #     print(res)
 
 
@@ -61,35 +71,39 @@ def parse_kdbx(filepath: pathlib.Path, password_file: pathlib.Path | None):
         check=True,
     )
 
-    passwords = []
+    passwords: list[tuple[str, str]] = []
     tree = ET.fromstring(keepass_xml.stdout.decode("utf8"))
 
-    for root in tree.findall("Root"):
-        for group in root.findall("Group"):
-            for category in group.findall("Group"):
-                for entry in category.findall("Entry"):
-                    title = ""
-                    password = ""
+    for group in tree.findall("Root/Group/Group"):
 
-                    for string in entry.findall("String"):
-                        key = string.find("Key")
-                        val = string.find("Value")
+        if group.find("Name").text == "Recycle Bin":
+            continue
 
-                        if key.text == "Title":
-                            title = val.text
-                        if key.text == "Password":
-                            password = val.text
+        for entry in group.findall("Entry"):
+            title = ""
+            password = ""
 
-                    if title and password:
-                        passwords.append((title, password))
+            for string in entry.findall("String"):
+                key = string.find("Key")
+                val = string.find("Value")
+
+                if key.text == "Title":
+                    title = val.text
+                if key.text == "Password":
+                    password = val.text
+
+            if title and password:
+                passwords.append((title, sha1sum(password)))
+
+    return passwords
 
 
-def send_request(url: str, session: requests.Session):
+def send_request(url: str, session: requests.Session, timeout: float):
     """
     Sends a request to the HIBP endpoint to check for matches using a range of characters from the
     SHA1 message digest of the password.
     """
-    res = session.get(url, timeout=REQUEST_TIMEOUT)
+    res = session.get(url, timeout=timeout)
 
     if res.status_code != 200:
         raise RuntimeError(f"Error during request: {res.status_code} - {res.reason}")
@@ -97,14 +111,11 @@ def send_request(url: str, session: requests.Session):
     return res.text
 
 
-def hash_password(password):
+def sha1sum(password: str):
     """
-    Computes the given password using the SHA1 hashing algorithm, producing a digest in hexadecimal
-    format. Returns a tuple of this digest composed of the first five and the remaining characters.
+    Computes the password using the SHA-1 hashing algorithm and returning a hexadecimal digest.
     """
-    digest = hashlib.sha1(password.encode("utf-8")).hexdigest().upper()
-    head, tail = digest[:5], digest[5:]
-    return head, tail
+    return hashlib.sha1(password.encode("utf-8")).hexdigest().upper()
 
 
 def parse_arguments():
@@ -118,12 +129,12 @@ def parse_arguments():
 
     file_input_group = parser.add_mutually_exclusive_group()
 
-    parser.add_argument(
-        "passwords",
-        help="The passwords to check against the HIBP service.",
-        nargs="*",
-        default=sys.stdin,
-    )
+    # parser.add_argument(
+    #     "passwords",
+    #     help="The passwords to check against the HIBP service.",
+    #     nargs="*",
+    #     default=sys.stdin,
+    # )
 
     file_input_group.add_argument(
         "-f",
@@ -199,23 +210,23 @@ def parse_arguments():
 
     args = parser.parse_args()
 
-    if not isinstance(args.passwords, list):
-        char = ""
-        buffer = []
-        passwords = []
-
-        while True:
-            char = args.passwords.read(1)
-            if char == "":
-                passwords.append("".join(buffer))
-                break
-            if char == " ":
-                passwords.append("".join(buffer))
-                buffer = []
-            else:
-                buffer.append(char)
-
-        args.passwords = passwords
+    # if not isinstance(args.passwords, list):
+    #     char = ""
+    #     buffer = []
+    #     passwords = []
+    #
+    #     while True:
+    #         char = args.passwords.read(1)
+    #         if char == "":
+    #             passwords.append("".join(buffer))
+    #             break
+    #         if char == " ":
+    #             passwords.append("".join(buffer))
+    #             buffer = []
+    #         else:
+    #             buffer.append(char)
+    #
+    #     args.passwords = passwords
 
     return args
 
