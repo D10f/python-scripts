@@ -7,6 +7,7 @@ in any data breaches.
 
 
 import argparse
+import getpass
 import hashlib
 import pathlib
 import subprocess
@@ -51,7 +52,7 @@ def parse_kdbx(filepath: pathlib.Path, password_file: pathlib.Path | None):
         with open(password_file, "r", encoding="utf8") as f:
             keepass_password = f.readline().strip()
     else:
-        keepass_password = input(f"Enter password to unlock {filepath}: ")
+        keepass_password = getpass.getpass(f"Enter password to unlock {filepath}: ")
 
     keepass_xml = subprocess.run(
         ["keepassxc-cli", "export", "--format", "xml", filepath],
