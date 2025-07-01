@@ -64,7 +64,7 @@ def parse_plaintext(filepath: pathlib.Path, skip_hashing=False):
             if not skip_hashing:
                 _line = sha1sum(_line)
 
-            passwords.append((_line, _line))
+            passwords.append((line[:5] + "...", _line))
 
     return passwords
 
@@ -142,7 +142,10 @@ def parse_arguments():
     the resulting list for the args.passwords argument.
     """
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="""Checks passwords against the "Have I Been Pwned?" (HIBP) database to find out
+        if they've been seen in any data breaches."""
+    )
 
     file_input_group = parser.add_mutually_exclusive_group()
 
@@ -226,10 +229,9 @@ def parse_arguments():
     )
 
     args = parser.parse_args()
-    #
-    # if len(args.passwords) == 0:
-    #     args.passwords = sys.stdin.readline().strip().split(" ")
-    #
+
+    if not isinstance(args.passwords, list):
+        args.passwords = sys.stdin.readline().strip().split(" ")
 
     return args
 
