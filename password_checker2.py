@@ -27,6 +27,7 @@ def main():
     The main entrypoint of the script.
     """
     args = parse_arguments()
+    account_details: list[tuple[str, str]] = []
 
     session = requests.Session()
     session.headers.update(
@@ -34,22 +35,38 @@ def main():
     )
 
     if args.keepass_database:
-        account_tuple = parse_kdbx(args.keepass_database, args.keepass_password_file)
+        account_details = parse_kdbx(args.keepass_database, args.keepass_password_file)
+    elif args.file:
+        account_details = parse_plaintext(args.file, args.skip_hashing)
 
-        for account, password in account_tuple:
-            head, tail = password[:5], password[5:]
-            res = send_request(BASE_URL + head, session, args.request_timeout)
-            hashes = (line.split(":") for line in res.splitlines())
-            for hash_tail, count in hashes:
-                if int(count) > 0 and hash_tail == tail:
-                    print(f'Found {count} matches for "{account}"')
-            time.sleep(args.request_delay)
+    for account, password in account_details:
+        head, tail = password[:5], password[5:]
+        res = send_request(BASE_URL + head, session, args.request_timeout)
 
-    # for password in args.passwords:
-    #     password_digest = sha1sum(password)
-    #     head, tail = password_digest[:5], password_digest[5:]
-    #     res = send_request(BASE_URL + head, session)
-    #     print(res)
+        for hash_tail, count in (line.split(":") for line in res.splitlines()):
+            if int(count) > 0 and hash_tail == tail:
+                print(f'Found {count} matches for "{account}"')
+
+        time.sleep(args.request_delay)
+
+
+def parse_plaintext(filepath: pathlib.Path, skip_hashing=False):
+    """
+    Parses a plaintext file where each line is assumed to be its own password. If skip_hashing is
+    True, then each line is assumed to be already hashed using SHA-1.
+    """
+    passwords: list[tuple[str, str]] = []
+
+    with open(filepath, "r", encoding="utf8") as f:
+        for line in f.readlines():
+            _line = line.strip("\n")
+
+            if not skip_hashing:
+                _line = sha1sum(_line)
+
+            passwords.append((_line, _line))
+
+    return passwords
 
 
 def parse_kdbx(filepath: pathlib.Path, password_file: pathlib.Path | None):
@@ -129,12 +146,12 @@ def parse_arguments():
 
     file_input_group = parser.add_mutually_exclusive_group()
 
-    # parser.add_argument(
-    #     "passwords",
-    #     help="The passwords to check against the HIBP service.",
-    #     nargs="*",
-    #     default=sys.stdin,
-    # )
+    file_input_group.add_argument(
+        "passwords",
+        help="The passwords to check against the HIBP service.",
+        nargs="*",
+        default=sys.stdin,
+    )
 
     file_input_group.add_argument(
         "-f",
@@ -209,24 +226,10 @@ def parse_arguments():
     )
 
     args = parser.parse_args()
-
-    # if not isinstance(args.passwords, list):
-    #     char = ""
-    #     buffer = []
-    #     passwords = []
     #
-    #     while True:
-    #         char = args.passwords.read(1)
-    #         if char == "":
-    #             passwords.append("".join(buffer))
-    #             break
-    #         if char == " ":
-    #             passwords.append("".join(buffer))
-    #             buffer = []
-    #         else:
-    #             buffer.append(char)
+    # if len(args.passwords) == 0:
+    #     args.passwords = sys.stdin.readline().strip().split(" ")
     #
-    #     args.passwords = passwords
 
     return args
 
