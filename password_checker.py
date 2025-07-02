@@ -8,6 +8,7 @@ in any data breaches.
 import argparse
 import getpass
 import hashlib
+import io
 import pathlib
 import subprocess
 import sys
@@ -38,6 +39,8 @@ def main():
         account_details = parse_kdbx(args.keepass_database, args.keepass_password_file)
     elif args.file:
         account_details = parse_plaintext(args.file, args.skip_hashing)
+    else:
+        account_details = parse_password_arguments(args.passwords, args.skip_hashing)
 
     for account, password in account_details:
         head, tail = password[:5], password[5:]
@@ -50,7 +53,27 @@ def main():
         time.sleep(args.request_delay)
 
 
-def parse_plaintext(filepath: pathlib.Path, skip_hashing=False):
+def parse_password_arguments(
+    password_list: list | io.TextIOWrapper, skip_hashing: bool
+):
+    """
+    Parses the positional arguments provided, or from standard input if there aren't any.
+    """
+    passwords: list[tuple[str, str]] = []
+
+    if isinstance(password_list, io.TextIOWrapper):
+        password_list = sys.stdin.readline().strip().split(" ")
+
+    for p in password_list:
+        if not skip_hashing:
+            p = sha1sum(p)
+
+        passwords.append((p[:5] + "...", p))
+
+    return passwords
+
+
+def parse_plaintext(filepath: pathlib.Path, skip_hashing: bool):
     """
     Parses a plaintext file where each line is assumed to be its own password. If skip_hashing is
     True, then each line is assumed to be already hashed using SHA-1.
@@ -228,12 +251,7 @@ def parse_arguments():
         "-V", "--version", action="version", version=f"%(prog)s {CURRENT_VERSION}"
     )
 
-    args = parser.parse_args()
-
-    if not isinstance(args.passwords, list):
-        args.passwords = sys.stdin.readline().strip().split(" ")
-
-    return args
+    return parser.parse_args()
 
 
 if __name__ == "__main__":

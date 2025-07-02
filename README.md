@@ -26,14 +26,23 @@ $ resizer.py ~/Pictures/* -o ~/Desktop -t backup
 
 Check your passwords against the popular "Have I Been Pwned?" website and find out if they've been leaked in any of the increasingly common data breaches. Your passwords provided to the script will remain secured as only a hash is used, as per the Have I Been Pwned API requires.
 
-You can provide passwords inline or through a CSV file, ideal if your password manager (such as KeePassXC) supports exporting data in CSV format. For security you can instruct the script to securely delete that file from your hard drive by overwriting the original contents with random bytes before deleting it.
+You can provide passwords inline as positional parameters or read from standard input, a text file or from a ".kdbx" file directly &mdash; requires `keepassxc-cli` to be installed.
 
+Interestingly, the password "P4$$w0rd" doesn't appear in any data breaches.
+```sh
+$ ./password_checker.py P4$$w0rd welcome 123456
+Found 1128697 matches for "C0B13..."
+Found 130075037 matches for "7C4A8..."
 ```
-$ ./password_checker.py password1 123456 -f ~/Desktop/path_to_file.csv --delete --verbose
-Found match for "Gmail" 1444 times!
-Found match for "pas..." 2427158 times!
-Found match for "123..." 24230577 times!
-DEBUG:root:Securely deleting file (3 rounds...)
+
+Or from a KeePass database file:
+
+```sh
+$ ./password_checker.py -k ~/Public/keepass_database.kdbx -K ~/.config/keepassxc/database_pass
+Found 243 matches for "Linux Foundation"
+Found 208136 matches for "Discord"
+Found 110323 matches for "Gmail"
+Found 110323 matches for "Vue Mastery"
 ```
 
 ---
