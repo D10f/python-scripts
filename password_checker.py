@@ -28,26 +28,62 @@ def main():
     """
     args = parse_arguments()
     account_details: list[tuple[str, str]] = []
-
-    session = requests.Session()
-    session.headers.update(
-        {"user-agent": __name__, "Add-Padding": str(args.add_padding)}
-    )
+    session_headers = {"user-agent": __name__, "Add-Padding": str(args.add_padding)}
 
     if args.keepass_database:
         account_details = parse_kdbx(args.keepass_database, args.keepass_password_file)
     elif args.file:
         account_details = parse_plaintext(args.file, args.skip_hashing)
 
-    for account, password in account_details:
-        head, tail = password[:5], password[5:]
-        res = send_request(BASE_URL + head, session, args.request_timeout)
+    with requests.Session() as session:
+        session.headers.update(session_headers)
+        for account, password in account_details:
+            have_i_been_pwned(
+                account, password, session, args.request_timeout, args.request_delay
+            )
 
-        for hash_tail, count in (line.split(":") for line in res.splitlines()):
+
+def have_i_been_pwned(
+    account: str,
+    password: str,
+    session: requests.Session,
+    timeout: float,
+    delay: float,
+):
+    """
+    Sends the request to the HIBP server and checks the response.
+    """
+    head, tail = password[:5], password[5:]
+
+    try:
+        response = session.get(BASE_URL + head, timeout=timeout)
+        response.raise_for_status()
+
+        for hash_tail, count in (
+            line.split(":") for line in response.text.splitlines()
+        ):
             if int(count) > 0 and hash_tail == tail:
                 print(f'Found {count} matches for "{account}"')
 
-        time.sleep(args.request_delay)
+    except requests.exceptions.ConnectionError:
+        print(
+            """Could not connect to the server. Please check your network settings and/or try
+        again later."""
+        )
+        sys.exit(1)
+
+    except requests.exceptions.Timeout as e:
+        print(e.response)
+
+    except requests.exceptions.HTTPError as e:
+        print(e.response.status_code, e.response.text)
+
+        if e.response.status_code == 429:
+            retry_after = int(e.response.headers["retry_after"] or "2")
+            delay = max(retry_after, delay)
+
+    finally:
+        time.sleep(delay)
 
 
 def parse_plaintext(filepath: pathlib.Path, skip_hashing=False):
@@ -115,17 +151,17 @@ def parse_kdbx(filepath: pathlib.Path, password_file: pathlib.Path | None):
     return passwords
 
 
-def send_request(url: str, session: requests.Session, timeout: float):
-    """
-    Sends a request to the HIBP endpoint to check for matches using a range of characters from the
-    SHA1 message digest of the password.
-    """
-    res = session.get(url, timeout=timeout)
-
-    if res.status_code != 200:
-        raise RuntimeError(f"Error during request: {res.status_code} - {res.reason}")
-
-    return res.text
+# def send_request(url: str, session: requests.Session, timeout: float):
+#     """
+#     Sends a request to the HIBP endpoint to check for matches using a range of characters from the
+#     SHA1 message digest of the password.
+#     """
+#     res = session.get(url, timeout=timeout)
+#
+#     if res.status_code != 200:
+#         raise RuntimeError(f"Error during request: {res.status_code} - {res.reason}")
+#
+#     return res.text
 
 
 def sha1sum(password: str):
