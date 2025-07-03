@@ -28,7 +28,10 @@ def main():
     """
     args = parse_arguments()
     account_details: list[tuple[str, str]] = []
-    session_headers = {"user-agent": __name__, "Add-Padding": str(args.add_padding)}
+    session_headers = {
+        "user-agent": f"d10f/python_scripts/password_checker@{CURRENT_VERSION}",
+        "Add-Padding": str(args.add_padding),
+    }
 
     if args.keepass_database:
         account_details = parse_kdbx(args.keepass_database, args.keepass_password_file)
@@ -261,7 +264,7 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "-V", "--version", action="version", version=f"%(prog)s {CURRENT_VERSION}"
+        "-V", "--version", action="version", version=f"%(prog)s v{CURRENT_VERSION}"
     )
 
     args = parser.parse_args()
