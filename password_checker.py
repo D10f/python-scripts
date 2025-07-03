@@ -9,6 +9,7 @@ import argparse
 import getpass
 import hashlib
 import io
+import os
 import pathlib
 import subprocess
 import sys
@@ -16,9 +17,12 @@ import time
 import xml.etree.ElementTree as ET
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
-CURRENT_VERSION = "v3.0.0"
-REQUEST_TIMEOUT = 9.15
+CURRENT_VERSION = "3.0.0"
+MAX_RETRIES = 3
+REQUEST_TIMEOUT = 9.5
 REQUEST_INTERVAL = 1.5
 BASE_URL = "https://api.pwnedpasswords.com/range/"
 
@@ -30,47 +34,93 @@ def main():
     args = parse_arguments()
     account_details: list[tuple[str, str]] = []
 
-    session = requests.Session()
-    session.headers.update(
-        {"user-agent": __name__, "Add-Padding": str(args.add_padding)}
-    )
-
     if args.keepass_database:
         account_details = parse_kdbx(args.keepass_database, args.keepass_password_file)
     elif args.file:
         account_details = parse_plaintext(args.file, args.skip_hashing)
     else:
-        account_details = parse_password_arguments(args.passwords, args.skip_hashing)
+        account_details = read_positional_args(args.passwords, args.skip_hashing)
 
-    for account, password in account_details:
-        head, tail = password[:5], password[5:]
-        res = send_request(BASE_URL + head, session, args.request_timeout)
+    with create_session(args.max_retries, args.add_padding) as session:
+        for account, password in account_details:
+            have_i_been_pwned(
+                account,
+                password,
+                session,
+                args.request_timeout,
+            )
+            time.sleep(args.request_delay)
 
-        for hash_tail, count in (line.split(":") for line in res.splitlines()):
+
+def have_i_been_pwned(
+    account: str,
+    password: str,
+    session: requests.Session,
+    timeout: float,
+):
+    """
+    Sends the request to the HIBP server and checks the response.
+    """
+    head, tail = password[:5], password[5:]
+
+    try:
+        response = session.get(BASE_URL + head, timeout=timeout)
+        response.raise_for_status()
+
+        for hash_tail, count in (
+            line.split(":") for line in response.text.splitlines()
+        ):
             if int(count) > 0 and hash_tail == tail:
                 print(f'Found {count} matches for "{account}"')
 
-        time.sleep(args.request_delay)
+    except requests.exceptions.ConnectionError:
+        print(
+            """Could not connect to the server. Please check your network settings and/or try again later."""
+        )
 
 
-def parse_password_arguments(
-    password_list: list | io.TextIOWrapper, skip_hashing: bool
-):
+def create_session(max_retries: int, add_padding: bool):
     """
-    Parses the positional arguments provided, or from standard input if there aren't any.
+    Creates and configures a requests.Session instance to be reused throughout the script.
     """
-    passwords: list[tuple[str, str]] = []
 
-    if isinstance(password_list, io.TextIOWrapper):
+    session_headers = {
+        "user-agent": os.path.basename(__file__).split(".")[0] + "@" + CURRENT_VERSION,
+        "Add-Padding": str(add_padding),
+    }
+
+    session = requests.Session()
+    session.headers.update(session_headers)
+    retries = Retry(
+        total=max_retries,
+        backoff_factor=1,
+        respect_retry_after_header=True,
+    )
+    session.mount(BASE_URL, HTTPAdapter(max_retries=retries))
+
+    return session
+
+
+def read_positional_args(passwords: list[str] | io.TextIOWrapper, skip_hashing: bool):
+    """
+    Reads passwords to be processed from the positional arguments, or from standard input if there
+    are none provided.
+    """
+    account_details: list[tuple[str, str]] = []
+    password_list = passwords
+
+    if isinstance(passwords, io.TextIOWrapper):
         password_list = sys.stdin.readline().strip().split(" ")
 
-    for p in password_list:
-        if not skip_hashing:
-            p = sha1sum(p)
+    for password in password_list:
+        account_details.append(
+            (
+                password[:5].ljust(8, "."),
+                password if skip_hashing else sha1sum(password),
+            )
+        )
 
-        passwords.append((p[:5] + "...", p))
-
-    return passwords
+    return account_details
 
 
 def parse_plaintext(filepath: pathlib.Path, skip_hashing: bool):
@@ -82,12 +132,10 @@ def parse_plaintext(filepath: pathlib.Path, skip_hashing: bool):
 
     with open(filepath, "r", encoding="utf8") as f:
         for line in f.readlines():
-            _line = line.strip("\n")
-
-            if not skip_hashing:
-                _line = sha1sum(_line)
-
-            passwords.append((line[:5] + "...", _line))
+            line = line.strip("\n")
+            passwords.append(
+                (line[:5].ljust(8, "."), line if skip_hashing else sha1sum(line))
+            )
 
     return passwords
 
@@ -136,19 +184,6 @@ def parse_kdbx(filepath: pathlib.Path, password_file: pathlib.Path | None):
                 passwords.append((title, sha1sum(password)))
 
     return passwords
-
-
-def send_request(url: str, session: requests.Session, timeout: float):
-    """
-    Sends a request to the HIBP endpoint to check for matches using a range of characters from the
-    SHA1 message digest of the password.
-    """
-    res = session.get(url, timeout=timeout)
-
-    if res.status_code != 200:
-        raise RuntimeError(f"Error during request: {res.status_code} - {res.reason}")
-
-    return res.text
 
 
 def sha1sum(password: str):
@@ -240,6 +275,14 @@ def parse_arguments():
     )
 
     parser.add_argument(
+        "-r",
+        "--max-retries",
+        help="number of attempts to retry a connection that has timed out. Default: 3",
+        type=int,
+        default=MAX_RETRIES,
+    )
+
+    parser.add_argument(
         "-v",
         "--verbose",
         help="makes the program produce more output as it runs",
@@ -248,11 +291,15 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "-V", "--version", action="version", version=f"%(prog)s {CURRENT_VERSION}"
+        "-V", "--version", action="version", version=f"%(prog)s v{CURRENT_VERSION}"
     )
 
     return parser.parse_args()
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        print("SIGTERM signal detected. Exiting...")
+        sys.exit(1)
