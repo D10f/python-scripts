@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """
 Checks passwords against the "Have I Been Pwned?" (HIBP) database to find out if they've been seen
@@ -20,7 +20,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
-CURRENT_VERSION = "3.0.0"
+CURRENT_VERSION = "3.1.0"
+USER_AGENT_TOKEN = os.path.basename(__file__).split(".")[0]
 MAX_RETRIES = 3
 REQUEST_TIMEOUT = 9.5
 REQUEST_INTERVAL = 1.5
@@ -41,7 +42,7 @@ def main():
     else:
         account_details = read_positional_args(args.passwords, args.skip_hashing)
 
-    with create_session(args.max_retries, args.add_padding) as session:
+    with create_session(args.max_retries, args.add_padding, args.user_agent) as session:
         for account, password in account_details:
             have_i_been_pwned(
                 account,
@@ -79,24 +80,27 @@ def have_i_been_pwned(
         )
 
 
-def create_session(max_retries: int, add_padding: bool):
+def create_session(max_retries: int, add_padding: bool, user_agent: str):
     """
     Creates and configures a requests.Session instance to be reused throughout the script.
     """
 
-    session_headers = {
-        "user-agent": os.path.basename(__file__).split(".")[0] + "@" + CURRENT_VERSION,
-        "Add-Padding": str(add_padding),
-    }
-
     session = requests.Session()
-    session.headers.update(session_headers)
-    retries = Retry(
+
+    session.headers.update(
+        {
+            "user-agent": user_agent,
+            "Add-Padding": str(add_padding),
+        }
+    )
+
+    retry_strategy = Retry(
         total=max_retries,
         backoff_factor=1,
         respect_retry_after_header=True,
     )
-    session.mount(BASE_URL, HTTPAdapter(max_retries=retries))
+
+    session.mount(BASE_URL, HTTPAdapter(max_retries=retry_strategy))
 
     return session
 
@@ -254,6 +258,13 @@ def parse_arguments():
         help="""skips hashing the passwords before querying them against the HIBP service. Use this
         when you are sure the input passwords are already hashed. Use with extreme caution!""",
         action="store_true",
+    )
+
+    parser.add_argument(
+        "--user-agent",
+        help="""Defines the user agent string (required by the HIBP service). Defaults to the name
+        of the script and version.""",
+        default=f"{USER_AGENT_TOKEN}/{CURRENT_VERSION}",
     )
 
     parser.add_argument(
