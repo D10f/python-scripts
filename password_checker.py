@@ -36,7 +36,9 @@ def main():
     account_details: list[tuple[str, str]] = []
 
     if args.keepass_database:
-        account_details = parse_kdbx(args.keepass_database, args.keepass_password_file)
+        account_details = parse_kdbx(
+            args.keepass_database, args.keepass_password_file, args.keepass_key_file
+        )
     elif args.file:
         account_details = parse_plaintext(args.file, args.skip_hashing)
     else:
@@ -144,20 +146,36 @@ def parse_plaintext(filepath: pathlib.Path, skip_hashing: bool):
     return passwords
 
 
-def parse_kdbx(filepath: pathlib.Path, password_file: pathlib.Path | None):
+def parse_kdbx(
+    database_file: pathlib.Path,
+    password_file: pathlib.Path | None,
+    database_keyfile: pathlib.Path | None,
+):
     """
     Parses the Keepass database file to extract the passwords to be checked for data breach against
     the HIPB service.
+
+    TODO:
+        - [X] Adjust command to execute when key file is provided.
+        - [ ] Parse XML correctly for any group structure.
+        - [ ] Parse Recycle Bin correctly using UUID since it can be renamed.
     """
+
+    keepass_cli_cmd = ["keepassxc-cli", "export", "--format", "xml", database_file]
+
+    if database_keyfile:
+        keepass_cli_cmd.extend(["--key-file", str(database_keyfile)])
 
     if password_file:
         with open(password_file, "r", encoding="utf8") as f:
             keepass_password = f.readline().strip()
     else:
-        keepass_password = getpass.getpass(f"Enter password to unlock {filepath}: ")
+        keepass_password = getpass.getpass(
+            f"Enter password to unlock {database_file}: "
+        )
 
     keepass_xml = subprocess.run(
-        ["keepassxc-cli", "export", "--format", "xml", filepath],
+        keepass_cli_cmd,
         stdout=subprocess.PIPE,
         input=keepass_password.encode("utf8"),
         check=True,
@@ -240,6 +258,13 @@ def parse_arguments():
         "--keepass-password-file",
         help="""path to a file containing the password to unlock the Keepass password database file.
         Use this option for non-interactive usage of this script.""",
+        metavar="FILE",
+        type=pathlib.Path,
+    )
+
+    parser.add_argument(
+        "--keepass-key-file",
+        help="path to a key file for unlocking the database.",
         metavar="FILE",
         type=pathlib.Path,
     )
