@@ -227,16 +227,23 @@ def parse_arguments():
         if they've been seen in any data breaches."""
     )
 
-    file_input_group = parser.add_mutually_exclusive_group()
+    general_options = parser.add_argument_group("General Options")
 
-    file_input_group.add_argument(
+    general_options.add_argument(
         "passwords",
         help="The passwords to check against the HIBP service.",
         nargs="*",
         default=sys.stdin,
     )
 
-    file_input_group.add_argument(
+    general_options.add_argument(
+        "--skip-hashing",
+        help="""skips hashing the passwords before querying them against the HIBP service. Use this
+        when you are sure the input passwords are already hashed. Use with extreme caution!""",
+        action="store_true",
+    )
+
+    general_options.add_argument(
         "-f",
         "--file",
         help="path to text file containing the passwords to check, with one password per line",
@@ -244,7 +251,9 @@ def parse_arguments():
         type=pathlib.Path,
     )
 
-    file_input_group.add_argument(
+    keepass_options = parser.add_argument_group("Keepass database options")
+
+    keepass_options.add_argument(
         "-k",
         "--keepass-database",
         help="""path to a Keepass password database file to read passwords from. The output
@@ -253,7 +262,7 @@ def parse_arguments():
         type=pathlib.Path,
     )
 
-    parser.add_argument(
+    keepass_options.add_argument(
         "-K",
         "--keepass-password-file",
         help="""path to a file containing the password to unlock the Keepass password database file.
@@ -262,14 +271,17 @@ def parse_arguments():
         type=pathlib.Path,
     )
 
-    parser.add_argument(
+    keepass_options.add_argument(
         "--keepass-key-file",
         help="path to a key file for unlocking the database.",
         metavar="FILE",
         type=pathlib.Path,
     )
 
-    parser.add_argument(
+    hibp_api_options = parser.add_argument_group("HIBP API options")
+
+    hibp_api_options.add_argument(
+        "-p",
         "--add-padding",
         help="""padding can be added to ensure all responses contain between 800 and 1000 results
         regardless of the numberof hash suffixes returned by the service. See also:
@@ -278,21 +290,15 @@ def parse_arguments():
         default=False,
     )
 
-    parser.add_argument(
-        "--skip-hashing",
-        help="""skips hashing the passwords before querying them against the HIBP service. Use this
-        when you are sure the input passwords are already hashed. Use with extreme caution!""",
-        action="store_true",
-    )
-
-    parser.add_argument(
+    hibp_api_options.add_argument(
+        "-u",
         "--user-agent",
         help="""Defines the user agent string (required by the HIBP service). Defaults to the name
         of the script and version.""",
         default=f"{USER_AGENT_TOKEN}/{CURRENT_VERSION}",
     )
 
-    parser.add_argument(
+    hibp_api_options.add_argument(
         "-d",
         "--request-delay",
         help="time to wait between requests to the HIBP service, in seconds. Default: 1.5.",
@@ -301,7 +307,7 @@ def parse_arguments():
         default=REQUEST_INTERVAL,
     )
 
-    parser.add_argument(
+    hibp_api_options.add_argument(
         "-t",
         "--request-timeout",
         help="time to wait for a response from the server, in seconds. Default: 9.15",
@@ -310,7 +316,7 @@ def parse_arguments():
         default=REQUEST_TIMEOUT,
     )
 
-    parser.add_argument(
+    hibp_api_options.add_argument(
         "-r",
         "--max-retries",
         help="number of attempts to retry a connection that has timed out. Default: 3",
