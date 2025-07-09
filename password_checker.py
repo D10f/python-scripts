@@ -11,16 +11,15 @@ import hashlib
 import io
 import os
 import pathlib
-import subprocess
 import sys
 import time
-import xml.etree.ElementTree as ET
 
 import requests
+from pykeepass import PyKeePass
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
-CURRENT_VERSION = "3.1.0"
+CURRENT_VERSION = "3.2.0"
 USER_AGENT_TOKEN = os.path.basename(__file__).split(".")[0]
 MAX_RETRIES = 3
 REQUEST_TIMEOUT = 9.5
@@ -149,61 +148,31 @@ def parse_plaintext(filepath: pathlib.Path, skip_hashing: bool):
 def parse_kdbx(
     database_file: pathlib.Path,
     password_file: pathlib.Path | None,
-    database_keyfile: pathlib.Path | None,
+    keyfile: pathlib.Path | None,
 ):
     """
     Parses the Keepass database file to extract the passwords to be checked for data breach against
     the HIPB service.
-
-    TODO:
-        - [X] Adjust command to execute when key file is provided.
-        - [ ] Parse XML correctly for any group structure.
-        - [ ] Parse Recycle Bin correctly using UUID since it can be renamed.
     """
-
-    keepass_cli_cmd = ["keepassxc-cli", "export", "--format", "xml", database_file]
-
-    if database_keyfile:
-        keepass_cli_cmd.extend(["--key-file", str(database_keyfile)])
 
     if password_file:
         with open(password_file, "r", encoding="utf8") as f:
-            keepass_password = f.readline().strip()
+            password = f.readline().strip()
     else:
-        keepass_password = getpass.getpass(
-            f"Enter password to unlock {database_file}: "
-        )
+        password = getpass.getpass(f"Enter password to unlock {database_file}: ")
 
-    keepass_xml = subprocess.run(
-        keepass_cli_cmd,
-        stdout=subprocess.PIPE,
-        input=keepass_password.encode("utf8"),
-        check=True,
-    )
-
+    kp = PyKeePass(database_file, password=password, keyfile=keyfile)
     passwords: list[tuple[str, str]] = []
-    tree = ET.fromstring(keepass_xml.stdout.decode("utf8"))
 
-    for group in tree.findall("Root/Group/Group"):
+    for entry in kp.entries:
+        if entry.group.name != "Recycle Bin":
+            title = entry.title
+            password = entry.password
 
-        if group.find("Name").text == "Recycle Bin":
-            continue
+            if not password:
+                continue
 
-        for entry in group.findall("Entry"):
-            title = ""
-            password = ""
-
-            for string in entry.findall("String"):
-                key = string.find("Key")
-                val = string.find("Value")
-
-                if key.text == "Title":
-                    title = val.text
-                if key.text == "Password":
-                    password = val.text
-
-            if title and password:
-                passwords.append((title, sha1sum(password)))
+            passwords.append((title, sha1sum(password)))
 
     return passwords
 
