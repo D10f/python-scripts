@@ -161,10 +161,15 @@ def parse_kdbx(
     else:
         password = getpass.getpass(f"Enter password to unlock {database_file}: ")
 
-    kp = PyKeePass(database_file, password=password, keyfile=keyfile)
     passwords: list[tuple[str, str]] = []
 
-    for entry in kp.entries:
+    kp = PyKeePass(database_file, password=password, keyfile=keyfile)
+    kp_entries = kp.find_entries()
+
+    if not kp_entries:
+        raise RuntimeError("Error finding entries from the provided Keepass database.")
+
+    for entry in kp_entries:
         if entry.group.name != "Recycle Bin":
             title = entry.title
             password = entry.password
